@@ -1,0 +1,35 @@
+name: Build Windows
+
+# Se ejecuta a mano: en la pestaña Actions del repositorio, "Build Windows" → "Run workflow".
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Descargar el código
+        uses: actions/checkout@v4
+
+      - name: Instalar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+
+      - name: Instalar Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Instalar dependencias
+        run: npm install
+
+      - name: Compilar Brasa para Windows
+        run: npm run tauri build
+
+      - name: Guardar los archivos para descargar
+        uses: actions/upload-artifact@v4
+        with:
+          name: brasa-windows
+          path: |
+            src-tauri/target/release/brasa.exe
+            src-tauri/target/release/bundle/nsis/*.exe
+          if-no-files-found: error

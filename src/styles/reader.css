@@ -1,0 +1,181 @@
+/* Reader frame. Chrome slides out with transforms, so the reading area never resizes. */
+.reader {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  background: var(--surface-app);
+}
+
+.reader__top,
+.reader__bottom {
+  position: relative;
+  z-index: 2;
+  background: var(--surface-raised);
+  transition: transform var(--duration-base) var(--ease-out), opacity var(--duration-base) ease;
+}
+
+.reader__top {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--border);
+  transform: translateY(-100%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.reader__bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-2) var(--space-4) var(--space-3);
+  border-top: 1px solid var(--border);
+  transform: translateY(100%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.reader--chrome .reader__top,
+.reader--chrome .reader__bottom {
+  transform: none;
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.reader__title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.reader__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.reader__stage {
+  position: relative;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.reader-body {
+  position: absolute;
+  inset: 0;
+}
+
+.reader__message {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: var(--space-4);
+  padding: var(--space-8);
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+.reader__message p {
+  max-width: 44ch;
+}
+
+/* Progress and position */
+.reader__progress {
+  flex: 1;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--surface-sunk);
+  overflow: hidden;
+}
+
+.reader__progress span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  transition: width var(--duration-base) var(--ease-out);
+}
+
+.reader__position {
+  min-width: 96px;
+  text-align: right;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-secondary);
+}
+
+/* PDF, one page at a time */
+.pdf-stage {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: var(--space-6) 48px;
+  overflow: auto;
+  cursor: default;
+}
+
+.pdf-page {
+  margin: auto 0;
+  border-radius: 2px;
+  background: #ffffff;
+  box-shadow: var(--shadow-page);
+  line-height: 0;
+}
+
+.pdf-page__canvas {
+  display: block;
+}
+
+/* PDF, continuous scrolling */
+.pdf-scroll {
+  position: absolute;
+  inset: 0;
+  padding: var(--space-6) 0;
+  overflow-y: auto;
+}
+
+.pdf-scroll__page {
+  margin: 0 auto var(--space-6);
+  border-radius: 2px;
+  background: #ffffff;
+  box-shadow: var(--shadow-page);
+  line-height: 0;
+}
+
+/* EPUB frame: the engine owns the iframe, we only shape its surroundings */
+.reader-frame {
+  position: absolute;
+  inset: 0;
+}
+
+.reader-frame iframe {
+  border: 0;
+}
+
+/* Page-turn zones over the outer 30% of the EPUB frame (paginated flow only) */
+.reader-edge {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 30%;
+  z-index: 1;
+  background: transparent;
+}
+
+.reader-edge--previous {
+  left: 0;
+}
+
+.reader-edge--next {
+  right: 0;
+}
