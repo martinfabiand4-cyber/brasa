@@ -1,6 +1,8 @@
 import * as pdfjs from "pdfjs-dist";
 import type { PDFDocumentProxy, PDFPageProxy, RenderTask } from "pdfjs-dist";
 import workerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
+import { findMatches } from "../lib/search";
+import type { SearchOptions } from "../reader/types";
 
 pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
 
@@ -98,4 +100,30 @@ export async function pageCssSize(
   const base = cssWidth / page.getViewport({ scale: 1 }).width;
   const viewport = page.getViewport({ scale: base * zoom });
   return { width: Math.floor(viewport.width), height: Math.floor(viewport.height) };
+}
+
+/**
+ * Scans the text layer of every page in order. Pages are released as soon as
+ * they are read, so the scan keeps memory flat on long documents.
+ */
+export async function searchPdf(doc: PDFDocumentProxy, query: string, options: SearchOptions): Promise<void> {
+  for (let page = 1; page <= doc.numPages; page++) {
+    if (options.signal.aborted) return;
+    const pdfPage = await doc.getPage(page);
+    try {
+      const content = await pdfPage.getTextContent();
+      const text = content.items
+        .map((item) => ("str" in item ? item.str + (item.hasEOL ? "\n" : "") : ""))
+        .join("");
+      for (const match of findMatches(text, query)) {
+        if (options.signal.aborted) return;
+        options.onHit({ position: String(page), section: page, before: match.before, match: match.match, after: match.after });
+      }
+    } catch {
+      // A page with a broken text layer is skipped; the rest of the document is still searched.
+    } finally {
+      pdfPage.cleanup();
+    }
+    options.onProgress(page / doc.numPages);
+  }
 }

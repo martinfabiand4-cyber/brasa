@@ -94,6 +94,18 @@ export default function SettingsPanel({ lib, onClose }: SettingsPanelProps) {
           />
         </Field>
 
+        <Field label={t("brightness")} hint={`${settings.brightness} %`}>
+          <input
+            type="range"
+            min={30}
+            max={100}
+            step={1}
+            value={settings.brightness}
+            onChange={(event) => set({ brightness: Number(event.target.value) })}
+            aria-label={t("brightness")}
+          />
+        </Field>
+
         <Field label={t("zoom")} hint={`${settings.zoom.toFixed(1)}×`}>
           <input
             type="range"

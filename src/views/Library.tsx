@@ -1,10 +1,12 @@
 import { ArrowsDownUp, FolderOpen, GearSix, Plus, X } from "@phosphor-icons/react";
-import { ask, open } from "@tauri-apps/plugin-dialog";
+import { open } from "@tauri-apps/plugin-dialog";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import BookCard from "../components/BookCard";
+import ConfirmDialog from "../components/ConfirmDialog";
 import SettingsPanel from "../components/SettingsPanel";
 import { useI18n, type Translate } from "../i18n/context";
+import { backfillCovers } from "../lib/coverBackfill";
 import { ImportError } from "../lib/importer";
 import { sortBooks } from "../lib/sort";
 import type { Book, SortMode } from "../lib/types";
@@ -24,9 +26,19 @@ export default function Library({ lib, onOpen }: LibraryProps) {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [dragging, setDragging] = useState(false);
+  const [pendingRemove, setPendingRemove] = useState<Book | null>(null);
 
   const { books } = lib.state.data;
   const sortKey = lib.settings.sort;
+  const { updateBook } = lib;
+  const coversStarted = useRef(false);
+
+  // Once the library is loaded, books from before covers existed get theirs in the background.
+  useEffect(() => {
+    if (lib.state.status !== "ready" || coversStarted.current) return;
+    coversStarted.current = true;
+    void backfillCovers(lib.state.data.books, (bookId, coverPath) => updateBook(bookId, { coverPath }));
+  }, [lib.state.status, lib.state.data.books, updateBook]);
 
   const visible = useMemo(() => {
     const sorted = sortBooks(books, sortKey, locale);
@@ -72,14 +84,11 @@ export default function Library({ lib, onOpen }: LibraryProps) {
     }
   }
 
-  async function handleRemove(book: Book) {
-    const confirmed = await ask(t("confirmRemove", { title: book.title }), {
-      title: t("appName"),
-      kind: "warning",
-      okLabel: t("remove"),
-      cancelLabel: t("cancel"),
-    });
-    if (confirmed) await lib.removeBook(book);
+  async function confirmRemove() {
+    if (!pendingRemove) return;
+    const book = pendingRemove;
+    setPendingRemove(null);
+    await lib.removeBook(book);
   }
 
   const { issues } = lib.state;
@@ -172,7 +181,7 @@ export default function Library({ lib, onOpen }: LibraryProps) {
                 book={book}
                 onOpen={() => onOpen(book.id)}
                 onToggleFavorite={() => lib.updateBook(book.id, { favorite: !book.favorite })}
-                onRemove={() => void handleRemove(book)}
+                onRemove={() => setPendingRemove(book)}
               />
             </li>
           ))}
@@ -184,6 +193,18 @@ export default function Library({ lib, onOpen }: LibraryProps) {
           <FolderOpen size={40} weight="thin" />
           <span>{t("importBooks")}</span>
         </div>
+      ) : null}
+
+      {pendingRemove ? (
+        <ConfirmDialog
+          title={t("confirmRemoveTitle")}
+          body={t("confirmRemoveBody")}
+          confirmLabel={t("remove")}
+          cancelLabel={t("cancel")}
+          danger
+          onConfirm={() => void confirmRemove()}
+          onCancel={() => setPendingRemove(null)}
+        />
       ) : null}
 
       {settingsOpen ? (

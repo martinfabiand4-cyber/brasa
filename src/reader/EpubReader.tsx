@@ -2,14 +2,17 @@ import { useCallback, useEffect, useImperativeHandle, useRef, useState, type Ref
 import type { Book, Rendition } from "epubjs";
 import {
   applyReadingStyle,
+  closeEpub,
   createRendition,
   generateLocations,
   openEpub,
   readEpubToc,
   readSpineLength,
+  searchEpub,
 } from "../engine/epubEngine";
 import { createTurnRunner, type TurnDirection } from "../lib/animateTurn";
 import type { Flow, PageTurn, Theme } from "../lib/types";
+import { createWheelZoom } from "../lib/zoom";
 import { type ReaderCallbacks, type ReaderHandle } from "./types";
 
 interface EpubReaderProps extends ReaderCallbacks {
@@ -39,18 +42,21 @@ export default function EpubReader({
   onPosition,
   onTap,
   onError,
+  onZoomStep,
 }: EpubReaderProps) {
   const hostRef = useRef<HTMLDivElement>(null);
+  const bodyRef = useRef<HTMLDivElement>(null);
   const renditionRef = useRef<Rendition | null>(null);
+  const bookRef = useRef<Book | null>(null);
   const [book, setBook] = useState<Book | null>(null);
   const [rendition, setRendition] = useState<Rendition | null>(null);
   const lastPosition = useRef<string | null>(initialPosition);
   const spineCount = useRef(0);
 
   // Latest callbacks and preferences, read by engine handlers that outlive a render.
-  const live = useRef({ pageTurn, onTap, onPosition, onReady, onError });
+  const live = useRef({ pageTurn, onTap, onPosition, onReady, onError, onZoomStep });
   useEffect(() => {
-    live.current = { pageTurn, onTap, onPosition, onReady, onError };
+    live.current = { pageTurn, onTap, onPosition, onReady, onError, onZoomStep };
   });
 
   const [runTurn] = useState(() =>
@@ -59,6 +65,9 @@ export default function EpubReader({
       () => live.current.pageTurn,
     ),
   );
+
+  // One wheel handler for the whole reader; it keeps its own step accumulator.
+  const [onWheel] = useState(() => createWheelZoom((direction) => live.current.onZoomStep(direction)));
 
   const turn = useCallback(
     (direction: TurnDirection) =>
@@ -81,6 +90,7 @@ export default function EpubReader({
         const [entries, chapters] = await Promise.all([readEpubToc(opened), readSpineLength(opened)]);
         if (cancelled) return;
         spineCount.current = chapters;
+        bookRef.current = opened;
         setBook(opened);
         live.current.onReady({
           toc: entries.map((entry) => ({ label: entry.label, depth: entry.depth, target: entry.href })),
@@ -94,7 +104,8 @@ export default function EpubReader({
 
     return () => {
       cancelled = true;
-      opened.destroy();
+      bookRef.current = null;
+      closeEpub(opened);
     };
   }, [bytes]);
 
@@ -114,6 +125,7 @@ export default function EpubReader({
           lastPosition.current = cfi;
           live.current.onPosition(cfi, progress);
         },
+        onWheel,
       },
     );
 
@@ -127,7 +139,7 @@ export default function EpubReader({
       setRendition(null);
     };
     // Theme and size changes are applied in place below; only structure rebuilds here.
-  }, [book, flow]);
+  }, [book, flow, onWheel]);
 
   useEffect(() => {
     if (rendition) applyReadingStyle(rendition, theme, fontSize);
@@ -143,6 +155,14 @@ export default function EpubReader({
     return () => observer.disconnect();
   }, [rendition]);
 
+  // Ctrl + wheel over the edge zones, which sit above the frame and catch the wheel first.
+  useEffect(() => {
+    const body = bodyRef.current;
+    if (!body) return;
+    body.addEventListener("wheel", onWheel, { passive: false });
+    return () => body.removeEventListener("wheel", onWheel);
+  }, [onWheel]);
+
   useImperativeHandle(
     ref,
     () => ({
@@ -152,6 +172,11 @@ export default function EpubReader({
         const current = renditionRef.current;
         if (current) void current.display(target).catch(() => undefined);
       },
+      search: (query, options) => {
+        const current = bookRef.current;
+        if (!current) return Promise.resolve();
+        return searchEpub(current, query, options);
+      },
     }),
     [turn],
   );
@@ -160,7 +185,7 @@ export default function EpubReader({
   // Edge zones sit above the frame so page turns work even where a frame does
   // not deliver clicks (WebKitGTK), and they keep working in every engine.
   return (
-    <div className="reader-body">
+    <div className="reader-body" ref={bodyRef}>
       <div className="reader-frame" ref={hostRef} />
       {flow === "paginated" && (
         <>

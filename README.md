@@ -4,17 +4,23 @@ Lector personal de libros EPUB y PDF para Windows y Linux. Todo se guarda en tu 
 
 Versión 0.1: biblioteca, lectura de EPUB y PDF, marcadores, índice, progreso y ajustes. Está hecha con Tauri 2, React y TypeScript.
 
-## Qué incluye la 0.1
+## Qué incluye
 
-- **Biblioteca** con portadas en tonos carmesí, orden alfabético, más reciente o descargado recientemente, y filtro de favoritos.
+- **Biblioteca** con portadas: las de los PDF y EPUB que la traen (la primera página en el caso de PDF); si no hay portada, un color generado en tonos carmesí. Orden alfabético, más reciente o descargado recientemente, y filtro de favoritos. Los libros importados antes de esta versión reciben su portada al abrir la biblioteca.
 - **Importar** con el botón o arrastrando archivos a la ventana. Solo acepta `.epub` y `.pdf`. Un libro duplicado (mismo contenido) se rechaza, y un archivo dañado muestra un aviso sin dejar basura en la biblioteca.
+- **Quitar un libro** pide confirmación con un diálogo del estilo de la app.
 - **Lectura paginada o en desplazamiento**, para ambos formatos.
 - **Zonas de toque**: el 30 % izquierdo retrocede, el 30 % derecho avanza y el centro muestra u oculta los menús.
-- **Índice**, **marcadores** y **barra de progreso** con la posición.
-- **Ajustes**: idioma (español o inglés), tema Noche o Papel, transición de página (deslizar, desvanecer o ninguna), flujo, tamaño de texto del EPUB y zoom del PDF.
+- **Barra de herramientas** flotante a la izquierda, con índice, buscar, marcador, brillo y ajustes.
+- **Buscar en todo el libro**: escribe una palabra y verás cada aparición, con el texto alrededor y el número de página o sección. Ignora mayúsculas y acentos, como el buscador de un navegador. Se detiene en 300 resultados.
+- **Marcadores con nombre**: guarda la página actual con el nombre que quieras, uno de cuatro diseños (cinta, etiqueta, banderín o punto) y uno de seis colores. Puedes editarlos o quitarlos desde la lista de marcadores.
+- **Brillo**: un control para atenuar o aumentar la luz de la página, en la barra de herramientas y en Ajustes.
+- **Zoom con la rueda**: mantén `Ctrl` y mueve la rueda sobre el texto para acercar o alejar. En PDF cambia el zoom; en EPUB, el tamaño del texto.
+- **Índice** y **barra de progreso** con la posición.
+- **Ajustes**: idioma (español o inglés), tema Noche o Papel, transición de página (deslizar, desvanecer o ninguna), flujo, tamaño de texto del EPUB, zoom del PDF y brillo.
 - **Teclado**: flechas, `Re Pág`/`Av Pág` y espacio para cambiar de página; `M` para mostrar u ocultar los menús; `Esc` para volver a la biblioteca.
 
-No incluye todavía (planeado para versiones siguientes): resaltados y notas, búsqueda de texto, desplazamiento automático, pasar página "tipo papel" (curva), contraseñas de PDF, lectura en voz alta, diccionario y sincronización.
+No incluye todavía (planeado para versiones siguientes): subrayados y resaltados con colores y estilos, notas y comentarios, búsqueda de texto dentro de imágenes (OCR), desplazamiento automático, pasar página "tipo papel" (curva), contraseñas de PDF, lectura en voz alta, diccionario y sincronización.
 
 ## Dónde se guardan los datos
 
@@ -90,15 +96,19 @@ npm run typecheck
 - `src/styles/`: tokens de color y tipografía en `tokens.css`.
 - `src-tauri/`: la aplicación de escritorio (Rust) y sus permisos en `capabilities/default.json`.
 
-## Estado de las pruebas (0.1)
+## Estado de las pruebas
 
-Probado en Linux (Ubuntu, WebKitGTK), con libros de prueba: importar EPUB y PDF, rechazar duplicados, rechazar un EPUB dañado sin dejar archivos, leer EPUB y PDF por páginas, zonas de toque de los bordes, teclado, barra de progreso y reanudar donde quedaste. Las pruebas unitarias (19) pasan.
+Probado en Linux (WebKitGTK, en una sesión virtual) con libros de prueba: importar EPUB y PDF, rechazar duplicados, rechazar un EPUB dañado sin dejar archivos, portada real de un PDF, búsqueda en PDF y EPUB, marcadores con nombre, diseño y color, brillo, zoom con `Ctrl` y rueda en PDF y EPUB, tema Papel, diálogo de confirmación al quitar un libro, y lectura paginada con zonas de toque, teclado y progreso. Las pruebas unitarias (37) pasan.
 
-Todavía sin probar en esta versión: arrastrar archivos a la ventana, modo de desplazamiento, marcadores, índice, ajustes (idioma, tema, transición, tamaño de texto y zoom) y la compilación en Windows.
+Todavía sin probar en esta versión: arrastrar archivos a la ventana, modo de desplazamiento, índice con marcadores en un escritorio Linux real, y la compilación para Windows.
 
 ## Limitaciones conocidas
 
 - **Clics dentro del EPUB en Linux:** en mis pruebas con WebKitGTK, el motor no entregó clics al contenido del libro (ni siquiera a un marco de prueba mínimo). Por eso las zonas de toque de los bordes están sobre el libro y funcionan en ambos sistemas, y el centro se controla con `M`. En Windows, el motor (WebView2, basado en Chromium) entrega los clics normalmente. Esto no pude confirmarlo en un escritorio Linux real.
+- **Zoom con `Ctrl` + rueda:** se usa `Ctrl` para que la rueda sola siga desplazando la página y pasando páginas. Si prefieres la rueda sin tecla, se puede cambiar.
+- **Subrayados, resaltados y notas:** todavía no están. Para subrayar y anotar hace falta seleccionar texto con precisión, que en EPUB no pude probar aquí.
+- **Búsqueda en imágenes (OCR):** la búsqueda solo encuentra texto que existe como texto. Un PDF escaneado sin capa de texto no devolverá resultados.
+- **Resultados de búsqueda:** al saltar a un resultado no se resalta la palabra dentro de la página todavía.
 - **PDF en memoria:** el archivo completo se carga en memoria al abrirlo. Libros muy grandes consumen RAM proporcional a su tamaño.
 - **PDF protegidos con contraseña** se rechazan con un aviso; la app no pide la contraseña todavía.
 - **DRM:** los libros con protección DRM no se pueden abrir.

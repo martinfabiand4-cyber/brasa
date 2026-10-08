@@ -3,6 +3,7 @@ import type { CSSProperties } from "react";
 import { useI18n } from "../i18n/context";
 import { percentOf } from "../lib/reading";
 import type { Book } from "../lib/types";
+import { useCover } from "../lib/useCover";
 
 interface BookCardProps {
   book: Book;
@@ -12,9 +13,8 @@ interface BookCardProps {
 }
 
 /**
- * Covers are generated from the title so every book has a stable, recognizable
- * face. The hue is kept inside the crimson-to-ember range so the library reads
- * as one family.
+ * A book's own cover when it has one. Otherwise a generated cover in the crimson
+ * family, drawn from the title so every book keeps a stable, recognizable face.
  */
 function coverHue(hue: number): number {
   return 348 + (hue % 36);
@@ -23,22 +23,26 @@ function coverHue(hue: number): number {
 export default function BookCard({ book, onOpen, onToggleFavorite, onRemove }: BookCardProps) {
   const { t } = useI18n();
   const percent = percentOf(book.progress);
-  const hue = coverHue(book.hue);
+  const image = useCover(book.coverPath);
   const coverStyle = {
-    "--cover-hue": hue,
+    "--cover-hue": coverHue(book.hue),
   } as CSSProperties;
 
   return (
     <article className="book-card">
       <button
         type="button"
-        className="book-card__cover"
+        className={`book-card__cover${image ? " book-card__cover--image" : ""}`}
         style={coverStyle}
         onClick={onOpen}
         aria-label={book.title}
       >
+        {image ? (
+          <img className="book-card__image" src={image} alt="" />
+        ) : (
+          <span className="book-card__title-on-cover">{book.title}</span>
+        )}
         <span className="book-card__format">{book.format.toUpperCase()}</span>
-        <span className="book-card__title-on-cover">{book.title}</span>
         {book.favorite ? <Star className="book-card__star" weight="fill" aria-hidden="true" /> : null}
       </button>
 
@@ -49,7 +53,7 @@ export default function BookCard({ book, onOpen, onToggleFavorite, onRemove }: B
         {book.author ? <p className="book-card__author">{book.author}</p> : null}
 
         <div className="book-card__progress" role="progressbar" aria-valuenow={percent} aria-valuemin={0} aria-valuemax={100} aria-label={t("progressLabel", { percent })}>
-          <span style={{ width: `${percent}%` }} />
+          <span style={{ transform: `scaleX(${percent / 100})` }} />
         </div>
 
         <div className="book-card__actions">

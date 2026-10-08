@@ -216,7 +216,7 @@ p {
 }
 
 .notice--warning {
-  border-left: 3px solid var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
 }
 
 /* Modal sheet and scrim */

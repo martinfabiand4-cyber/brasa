@@ -22,10 +22,12 @@
   --tinta-300: #cdbbb8;
   --tinta-400: #a99599;
 
-  --papel-50: #f7f4f4;
-  --papel-100: #efe9e9;
-  --papel-300: #d9cdcd;
-  --papel-900: #1f1517;
+  /* Paper uses cool neutrals: a warm, cream-tinted white tires the eyes. */
+  --frio-50: #f3f4f6;
+  --frio-100: #e7e9ed;
+  --frio-200: #d8dce2;
+  --frio-600: #5b616b;
+  --frio-900: #1c1f24;
 
   --font-ui: "Geist Variable", "Segoe UI", system-ui, sans-serif;
   --font-read: "Literata", Georgia, "Times New Roman", serif;
@@ -70,19 +72,26 @@
   --scrim: rgb(8 4 5 / 0.72);
   --shadow-page: 0 18px 48px rgb(0 0 0 / 0.55);
   --shadow-sheet: 0 24px 64px rgb(0 0 0 / 0.6);
+
+  /* Behind the text: the gutter, the page and the frame share one color, so there is no seam. */
+  --reading-bg: var(--noche-950);
+
+  --glass-fill: rgb(28 18 20 / 0.62);
+  --glass-edge: rgb(255 255 255 / 0.12);
+  --glass-shine: rgb(255 255 255 / 0.16);
 }
 
 /* 2. Semantic: paper */
 :root[data-theme="papel"] {
   color-scheme: light;
 
-  --surface-app: var(--papel-50);
-  --surface-raised: #ffffff;
-  --surface-sunk: var(--papel-100);
-  --surface-hover: var(--papel-100);
+  --surface-app: var(--frio-100);
+  --surface-raised: var(--frio-50);
+  --surface-sunk: var(--frio-200);
+  --surface-hover: var(--frio-200);
 
-  --text-primary: var(--papel-900);
-  --text-secondary: #6b5a5e;
+  --text-primary: var(--frio-900);
+  --text-secondary: var(--frio-600);
   --text-on-accent: #ffffff;
 
   --accent: var(--brasa-600);
@@ -90,10 +99,16 @@
   --accent-text: var(--brasa-600);
   --accent-soft: rgb(192 16 42 / 0.1);
 
-  --border: rgb(31 21 23 / 0.1);
-  --border-strong: rgb(31 21 23 / 0.2);
+  --border: rgb(28 31 36 / 0.1);
+  --border-strong: rgb(28 31 36 / 0.2);
   --focus-ring: var(--brasa-600);
-  --scrim: rgb(31 21 23 / 0.45);
-  --shadow-page: 0 14px 36px rgb(31 21 23 / 0.18);
-  --shadow-sheet: 0 24px 64px rgb(31 21 23 / 0.22);
+  --scrim: rgb(28 31 36 / 0.42);
+  --shadow-page: 0 14px 36px rgb(28 31 36 / 0.2);
+  --shadow-sheet: 0 24px 64px rgb(28 31 36 / 0.22);
+
+  --reading-bg: #f2f4f7;
+
+  --glass-fill: rgb(243 244 246 / 0.72);
+  --glass-edge: rgb(28 31 36 / 0.12);
+  --glass-shine: rgb(255 255 255 / 0.9);
 }
