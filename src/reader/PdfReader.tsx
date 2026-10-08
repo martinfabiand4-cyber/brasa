@@ -1,8 +1,9 @@
-import { useEffect, useLayoutEffect, useRef, useState, type Ref } from "react";
+import { useEffect, useImperativeHandle, useLayoutEffect, useRef, useState, type Ref } from "react";
 import type { PDFDocumentProxy } from "pdfjs-dist";
-import { openPdf, readPdfOutline } from "../engine/pdfEngine";
+import { openPdf, readPdfOutline, searchPdf } from "../engine/pdfEngine";
 import { pdfProgress } from "../lib/reading";
 import type { Flow, PageTurn } from "../lib/types";
+import { createWheelZoom } from "../lib/zoom";
 import PdfPaged from "./PdfPaged";
 import PdfScrolled from "./PdfScrolled";
 import { pdfTocFromOutline, type ReaderCallbacks, type ReaderHandle } from "./types";
@@ -31,11 +32,21 @@ export default function PdfReader({
   onPosition,
   onTap,
   onError,
+  onZoomStep,
 }: PdfReaderProps) {
   const hostRef = useRef<HTMLDivElement>(null);
+  const innerRef = useRef<ReaderHandle | null>(null);
+  const docRef = useRef<PDFDocumentProxy | null>(null);
   const [doc, setDoc] = useState<PDFDocumentProxy | null>(null);
   const [size, setSize] = useState({ width: 0, height: 0 });
   const { width, height } = size;
+
+  // Latest zoom callback, read by the wheel listener, which is attached once.
+  const zoomStep = useRef(onZoomStep);
+  useEffect(() => {
+    zoomStep.current = onZoomStep;
+  });
+  const [onWheel] = useState(() => createWheelZoom((direction) => zoomStep.current(direction)));
 
   // Opening happens once per book. A cancelled load destroys its own document.
   useEffect(() => {
@@ -51,6 +62,8 @@ export default function PdfReader({
         opened = pdf;
         const outline = await readPdfOutline(pdf);
         if (cancelled) return;
+        // Set before the callbacks run, so a search started at once already sees the document.
+        docRef.current = pdf;
         setDoc(pdf);
         onReady({ toc: pdfTocFromOutline(outline), totalPages: pdf.numPages });
       })
@@ -60,6 +73,7 @@ export default function PdfReader({
 
     return () => {
       cancelled = true;
+      docRef.current = null;
       if (opened) void opened.destroy();
     };
     // Callbacks are read at call time, so only the bytes decide when to reopen.
@@ -79,6 +93,28 @@ export default function PdfReader({
     return () => observer.disconnect();
   }, []);
 
+  useEffect(() => {
+    const el = hostRef.current;
+    if (!el) return;
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, [onWheel]);
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      next: () => innerRef.current?.next(),
+      previous: () => innerRef.current?.previous(),
+      goTo: (target: string) => innerRef.current?.goTo(target),
+      search: (query, options) => {
+        const current = docRef.current;
+        if (!current) return Promise.resolve();
+        return searchPdf(current, query, options);
+      },
+    }),
+    [doc],
+  );
+
   const initialPage = Number(initialPosition ?? 1) || 1;
 
   return (
@@ -86,7 +122,7 @@ export default function PdfReader({
       {doc && width > 0 ? (
         flow === "scroll" ? (
           <PdfScrolled
-            ref={ref}
+            ref={innerRef}
             doc={doc}
             initialPage={initialPage}
             width={width}
@@ -96,7 +132,7 @@ export default function PdfReader({
           />
         ) : (
           <PdfPaged
-            ref={ref}
+            ref={innerRef}
             doc={doc}
             initialPage={initialPage}
             width={width}

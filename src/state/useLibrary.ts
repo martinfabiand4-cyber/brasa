@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useReducer, useRef } from "react";
 import { baseName, createId } from "../lib/format";
+import { normalizeBookmark } from "../lib/bookmarks";
 import { importBook, ImportError } from "../lib/importer";
 import { DEFAULT_SETTINGS } from "../lib/settings";
 import { deleteBookFile, emptyLibrary, loadLibrary, saveLibrary } from "../lib/storage";
@@ -20,6 +21,7 @@ type Action =
   | { type: "book-removed"; id: string }
   | { type: "bookmark-added"; bookmark: Bookmark }
   | { type: "bookmark-removed"; id: string }
+  | { type: "bookmark-updated"; id: string; patch: Partial<Bookmark> }
   | { type: "settings"; patch: Partial<Settings> }
   | { type: "issues-cleared" };
 
@@ -59,6 +61,14 @@ function reducer(state: LibraryState, action: Action): LibraryState {
       };
     case "bookmark-added":
       return { ...state, data: { ...state.data, bookmarks: [...state.data.bookmarks, action.bookmark] } };
+    case "bookmark-updated":
+      return {
+        ...state,
+        data: {
+          ...state.data,
+          bookmarks: state.data.bookmarks.map((m) => (m.id === action.id ? normalizeBookmark({ ...m, ...action.patch }) : m)),
+        },
+      };
     case "bookmark-removed":
       return {
         ...state,
@@ -152,12 +162,17 @@ export function useLibrary() {
   const removeBook = useCallback(async (book: Book) => {
     dispatch({ type: "book-removed", id: book.id });
     await deleteBookFile(book.storedPath);
+    if (book.coverPath) await deleteBookFile(book.coverPath);
   }, []);
 
-  const addBookmark = useCallback((bookId: string, position: string, label: string) => {
-    const bookmark: Bookmark = { id: createId(), bookId, position, label, createdAt: Date.now() };
+  const addBookmark = useCallback((input: Omit<Bookmark, "id" | "createdAt">) => {
+    const bookmark: Bookmark = { ...input, id: createId(), createdAt: Date.now() };
     dispatch({ type: "bookmark-added", bookmark });
     return bookmark;
+  }, []);
+
+  const updateBookmark = useCallback((id: string, patch: Partial<Bookmark>) => {
+    dispatch({ type: "bookmark-updated", id, patch });
   }, []);
 
   const removeBookmark = useCallback((id: string) => {
@@ -177,6 +192,7 @@ export function useLibrary() {
     updateBook,
     removeBook,
     addBookmark,
+    updateBookmark,
     removeBookmark,
     updateSettings,
     clearIssues,

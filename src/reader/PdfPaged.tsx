@@ -4,10 +4,10 @@ import { renderPage } from "../engine/pdfEngine";
 import { createTurnRunner, type TurnDirection } from "../lib/animateTurn";
 import { clampPage, tapZoneFor, type TapZone } from "../lib/reading";
 import type { PageTurn } from "../lib/types";
-import type { ReaderHandle } from "./types";
+import type { ReaderNavigation } from "./types";
 
 interface PdfPagedProps {
-  ref?: Ref<ReaderHandle>;
+  ref?: Ref<ReaderNavigation>;
   doc: PDFDocumentProxy;
   initialPage: number;
   /** Width and height in CSS pixels available for the page. */

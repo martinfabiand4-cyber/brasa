@@ -3,7 +3,8 @@ import { openEpub, readEpubMetadata } from "../engine/epubEngine";
 import { openPdf, readPdfMetadata } from "../engine/pdfEngine";
 import { baseName, createId, detectFormat, hueFromString, titleFromFileName } from "./format";
 import { sha256Hex } from "./hash";
-import { deleteBookFile, writeBookBytes } from "./storage";
+import { coverFileName, deleteBookFile, writeBookBytes } from "./storage";
+import { extractCover } from "./cover";
 import type { Book } from "./types";
 
 export type ImportErrorReason = "unsupported" | "unreadable" | "duplicate";
@@ -50,6 +51,7 @@ export async function importBook(sourcePath: string, options: ImportOptions): Pr
       format === "pdf"
         ? await pdfMetadata(bytes)
         : await epubMetadata(bytes);
+    const coverPath = await saveCover(id, bytes, format);
     return buildBook({
       id,
       fileName,
@@ -59,6 +61,7 @@ export async function importBook(sourcePath: string, options: ImportOptions): Pr
       now: options.now ?? Date.now(),
       title: meta.title ?? fallbackTitle,
       author: meta.author,
+      coverPath,
     });
   } catch {
     await deleteBookFile(storedPath);
@@ -103,6 +106,19 @@ async function epubMetadata(bytes: Uint8Array) {
   }
 }
 
+/** Keeps the book's own cover when it has one. A cover that fails is not an error. */
+export async function saveCover(bookId: string, bytes: Uint8Array, format: Book["format"]): Promise<string | undefined> {
+  const cover = await extractCover(bytes, format);
+  if (!cover) return undefined;
+  const path = coverFileName(bookId, cover);
+  try {
+    await writeBookBytes(path, cover);
+    return path;
+  } catch {
+    return undefined;
+  }
+}
+
 function buildBook(input: {
   id: string;
   fileName: string;
@@ -112,6 +128,7 @@ function buildBook(input: {
   now: number;
   title: string;
   author: string | null;
+  coverPath?: string;
 }): Book {
   return {
     id: input.id,
@@ -127,5 +144,6 @@ function buildBook(input: {
     progress: 0,
     position: null,
     hue: hueFromString(input.title),
+    ...(input.coverPath ? { coverPath: input.coverPath } : {}),
   };
 }

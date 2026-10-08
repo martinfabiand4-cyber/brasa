@@ -8,6 +8,7 @@ export const DEFAULT_SETTINGS: Settings = {
   flow: "paginated",
   fontSize: 100,
   zoom: 1,
+  brightness: 100,
 };
 
 const LOCALES: readonly Locale[] = ["auto", "es", "en"];
@@ -38,6 +39,7 @@ export function sanitizeSettings(raw: unknown): Settings {
     flow: pick(input.flow, FLOWS, DEFAULT_SETTINGS.flow),
     fontSize: clamp(input.fontSize as number, 70, 200, DEFAULT_SETTINGS.fontSize),
     zoom: clamp(input.zoom as number, 0.6, 3, DEFAULT_SETTINGS.zoom),
+    brightness: clamp(input.brightness as number, 30, 100, DEFAULT_SETTINGS.brightness),
   };
 }
 

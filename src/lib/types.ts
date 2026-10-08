@@ -30,14 +30,22 @@ export interface Book {
   position: string | null;
   /** Hue used to draw the generated cover, 0 to 359. */
   hue: number;
+  /** Real cover image, relative to the app data folder, when the book has one. */
+  coverPath?: string;
 }
+
+export type BookmarkDesign = "ribbon" | "tag" | "flag" | "dot";
 
 export interface Bookmark {
   id: string;
   bookId: string;
   position: string;
+  /** The name the person gave it. */
   label: string;
   createdAt: number;
+  design: BookmarkDesign;
+  /** A color from the bookmark palette, as a hex value. */
+  color: string;
 }
 
 export interface Settings {
@@ -51,6 +59,8 @@ export interface Settings {
   fontSize: number;
   /** PDF zoom multiplier, 0.6 to 3. */
   zoom: number;
+  /** Screen dimming for the reading area, 30 (dimmest) to 100 (full light). */
+  brightness: number;
 }
 
 export interface LibraryData {

@@ -9,8 +9,9 @@ import {
   writeFile,
   writeTextFile,
 } from "@tauri-apps/plugin-fs";
+import { normalizeBookmark } from "./bookmarks";
 import { DEFAULT_SETTINGS, sanitizeSettings } from "./settings";
-import type { Book, Bookmark, LibraryData } from "./types";
+import type { LibraryData } from "./types";
 
 /**
  * Everything the app keeps lives in one JSON document inside the app data folder,
@@ -21,6 +22,7 @@ const LIBRARY_FILE = "library.json";
 const TEMP_FILE = "library.json.tmp";
 const BACKUP_FILE = "library.bak.json";
 export const BOOKS_DIR = "books";
+export const COVERS_DIR = "covers";
 
 const DIR = { baseDir: BaseDirectory.AppData };
 
@@ -32,8 +34,8 @@ function parseLibrary(raw: string): LibraryData {
   const parsed = JSON.parse(raw) as Partial<LibraryData>;
   return {
     version: 1,
-    books: Array.isArray(parsed.books) ? (parsed.books as Book[]) : [],
-    bookmarks: Array.isArray(parsed.bookmarks) ? (parsed.bookmarks as Bookmark[]) : [],
+    books: Array.isArray(parsed.books) ? parsed.books : [],
+    bookmarks: Array.isArray(parsed.bookmarks) ? parsed.bookmarks.map(normalizeBookmark) : [],
     settings: sanitizeSettings(parsed.settings),
   };
 }
@@ -44,6 +46,7 @@ function parseLibrary(raw: string): LibraryData {
  */
 export async function loadLibrary(): Promise<{ data: LibraryData; recovered: boolean }> {
   await mkdir(BOOKS_DIR, { ...DIR, recursive: true });
+  await mkdir(COVERS_DIR, { ...DIR, recursive: true });
 
   if (!(await exists(LIBRARY_FILE, DIR))) {
     return { data: emptyLibrary(), recovered: false };
@@ -89,4 +92,26 @@ export async function deleteBookFile(storedPath: string): Promise<void> {
   if (await exists(storedPath, DIR)) {
     await remove(storedPath, DIR);
   }
+}
+
+/** Reads a stored cover as a URL the page can show. The caller revokes it when done. */
+export async function readCoverUrl(coverPath: string): Promise<string> {
+  const bytes = await readFile(coverPath, DIR);
+  const type = sniffImageType(bytes);
+  return URL.createObjectURL(new Blob([bytes as BlobPart], { type }));
+}
+
+/** Covers are stored as JPEG, PNG, GIF or WebP; the type comes from the file's first bytes. */
+export function sniffImageType(bytes: Uint8Array): string {
+  if (bytes[0] === 0xff && bytes[1] === 0xd8) return "image/jpeg";
+  if (bytes[0] === 0x89 && bytes[1] === 0x50) return "image/png";
+  if (bytes[0] === 0x47 && bytes[1] === 0x49) return "image/gif";
+  if (bytes[8] === 0x57 && bytes[9] === 0x45) return "image/webp";
+  return "image/jpeg";
+}
+
+export function coverFileName(bookId: string, bytes: Uint8Array): string {
+  const type = sniffImageType(bytes);
+  const ext = type === "image/png" ? "png" : type === "image/gif" ? "gif" : type === "image/webp" ? "webp" : "jpg";
+  return `${COVERS_DIR}/${bookId}.${ext}`;
 }

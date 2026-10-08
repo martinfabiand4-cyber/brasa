@@ -4,6 +4,7 @@ import { sha256Hex } from "./hash";
 import { clampPage, resolvePageTurn, pdfProgress, percentOf, tapZoneFor } from "./reading";
 import { DEFAULT_SETTINGS, resolveLocale, sanitizeSettings } from "./settings";
 import { sortBooks } from "./sort";
+import { BOOKMARK_COLORS, DEFAULT_BOOKMARK_COLOR, normalizeBookmark } from "./bookmarks";
 import type { Book } from "./types";
 
 function book(overrides: Partial<Book> & { id: string; title: string }): Book {
@@ -153,5 +154,40 @@ describe("settings", () => {
     expect(resolveLocale("auto", "es-CL")).toBe("es");
     expect(resolveLocale("auto", "fr-FR")).toBe("en");
     expect(resolveLocale("en", "es-CL")).toBe("en");
+  });
+});
+
+describe("brightness and bookmarks", () => {
+  it("keeps brightness between 30 and 100, with 100 as the default", () => {
+    expect(DEFAULT_SETTINGS.brightness).toBe(100);
+    expect(sanitizeSettings({ brightness: 5 }).brightness).toBe(30);
+    expect(sanitizeSettings({ brightness: 250 }).brightness).toBe(100);
+    expect(sanitizeSettings({ brightness: "alto" }).brightness).toBe(100);
+    expect(sanitizeSettings({ brightness: 64 }).brightness).toBe(64);
+  });
+
+  it("gives bookmarks saved before designs existed a ribbon in the default color", () => {
+    const old = normalizeBookmark({ id: "m1", bookId: "b1", position: "3", createdAt: 10 });
+    expect(old.design).toBe("ribbon");
+    expect(old.color).toBe(DEFAULT_BOOKMARK_COLOR);
+    expect(old.label).toBe("");
+  });
+
+  it("drops a color that is not in the palette", () => {
+    const bookmark = normalizeBookmark({ id: "m2", bookId: "b1", position: "1", color: "#123456", design: "star" as never });
+    expect(bookmark.color).toBe(DEFAULT_BOOKMARK_COLOR);
+    expect(bookmark.design).toBe("ribbon");
+  });
+
+  it("keeps a valid name, design and color as they are", () => {
+    const bookmark = normalizeBookmark({
+      id: "m3",
+      bookId: "b1",
+      position: "7",
+      label: "Capítulo difícil",
+      design: "flag",
+      color: BOOKMARK_COLORS[3],
+    });
+    expect(bookmark).toMatchObject({ label: "Capítulo difícil", design: "flag", color: BOOKMARK_COLORS[3] });
   });
 });

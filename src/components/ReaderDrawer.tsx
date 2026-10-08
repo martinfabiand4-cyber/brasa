@@ -1,5 +1,6 @@
-import { BookmarkSimple, Trash, X } from "@phosphor-icons/react";
+import { PencilSimple, Trash, X } from "@phosphor-icons/react";
 import { useEffect, useId, useState } from "react";
+import BookmarkIcon from "./BookmarkIcon";
 import { useI18n } from "../i18n/context";
 import type { TocItem } from "../reader/types";
 import type { Bookmark } from "../lib/types";
@@ -12,8 +13,12 @@ interface ReaderDrawerProps {
   toc: TocItem[];
   bookmarks: Bookmark[];
   onGo: (target: string) => void;
+  onEditBookmark: (id: string) => void;
   onRemoveBookmark: (id: string) => void;
-  bookmarkLabel: (bookmark: Bookmark) => string;
+  /** The name shown for a bookmark. */
+  bookmarkTitle: (bookmark: Bookmark, index: number) => string;
+  /** A second line with the place in the book, or null when there is none to show. */
+  bookmarkDetail: (bookmark: Bookmark) => string | null;
   onClose: () => void;
 }
 
@@ -23,8 +28,10 @@ export default function ReaderDrawer({
   toc,
   bookmarks,
   onGo,
+  onEditBookmark,
   onRemoveBookmark,
-  bookmarkLabel,
+  bookmarkTitle,
+  bookmarkDetail,
   onClose,
 }: ReaderDrawerProps) {
   const { t } = useI18n();
@@ -86,17 +93,26 @@ export default function ReaderDrawer({
           <p className="drawer__empty">{t("noBookmarks")}</p>
         ) : (
           <ul className="bookmarks">
-            {bookmarks.map((bookmark) => (
-              <li key={bookmark.id}>
-                <button type="button" className="bookmarks__go" onClick={() => onGo(bookmark.position)}>
-                  <BookmarkSimple size={16} aria-hidden="true" />
-                  <span>{bookmarkLabel(bookmark)}</span>
-                </button>
-                <button type="button" className="icon-button" onClick={() => onRemoveBookmark(bookmark.id)} aria-label={t("removeBookmark")}>
-                  <Trash size={16} aria-hidden="true" />
-                </button>
-              </li>
-            ))}
+            {bookmarks.map((bookmark, index) => {
+              const detail = bookmarkDetail(bookmark);
+              return (
+                <li key={bookmark.id}>
+                  <button type="button" className="bookmarks__go" onClick={() => onGo(bookmark.position)}>
+                    <BookmarkIcon design={bookmark.design} color={bookmark.color} size={20} />
+                    <span className="bookmarks__text">
+                      <span className="bookmarks__name">{bookmarkTitle(bookmark, index)}</span>
+                      {detail ? <span className="bookmarks__detail">{detail}</span> : null}
+                    </span>
+                  </button>
+                  <button type="button" className="icon-button" onClick={() => onEditBookmark(bookmark.id)} aria-label={t("editBookmark")}>
+                    <PencilSimple size={16} aria-hidden="true" />
+                  </button>
+                  <button type="button" className="icon-button" onClick={() => onRemoveBookmark(bookmark.id)} aria-label={t("removeBookmark")}>
+                    <Trash size={16} aria-hidden="true" />
+                  </button>
+                </li>
+              );
+            })}
           </ul>
         )}
       </aside>

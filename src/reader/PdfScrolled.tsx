@@ -2,10 +2,10 @@ import { useEffect, useImperativeHandle, useMemo, useRef, useState, type MouseEv
 import type { PDFDocumentProxy, RenderTask } from "pdfjs-dist";
 import { pageCssSize, renderPage } from "../engine/pdfEngine";
 import { clampPage, tapZoneFor, type TapZone } from "../lib/reading";
-import type { ReaderHandle } from "./types";
+import type { ReaderNavigation } from "./types";
 
 interface PdfScrolledProps {
-  ref?: Ref<ReaderHandle>;
+  ref?: Ref<ReaderNavigation>;
   doc: PDFDocumentProxy;
   initialPage: number;
   width: number;
