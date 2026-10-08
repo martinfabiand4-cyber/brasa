@@ -2,6 +2,8 @@ name: Build Windows
 
 # Se ejecuta a mano: en la pestaña Actions del repositorio, "Build Windows" → "Run workflow".
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
 
 jobs:
