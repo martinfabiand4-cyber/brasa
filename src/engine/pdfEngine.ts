@@ -2,6 +2,7 @@ import * as pdfjs from "pdfjs-dist";
 import type { PDFDocumentProxy, PDFPageProxy, RenderTask } from "pdfjs-dist";
 import workerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import { findMatches } from "../lib/search";
+import { needsOcr, type PageText } from "../lib/textAnalysis";
 import type { SearchOptions } from "../reader/types";
 
 pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
@@ -102,27 +103,53 @@ export async function pageCssSize(
   return { width: Math.floor(viewport.width), height: Math.floor(viewport.height) };
 }
 
+/** The text layer of one page, with line breaks where the page has them. */
+export async function readPageText(doc: PDFDocumentProxy, pageNumber: number): Promise<string> {
+  const page = await doc.getPage(pageNumber);
+  try {
+    const content = await page.getTextContent();
+    return content.items.map((item) => ("str" in item ? item.str + (item.hasEOL ? "\n" : "") : "")).join("");
+  } finally {
+    page.cleanup();
+  }
+}
+
+/** Reads the text layer of every page, for headings and for finding the pages that are only images. */
+export async function scanPdfText(
+  doc: PDFDocumentProxy,
+  options: { signal: AbortSignal; onProgress: (ratio: number) => void },
+): Promise<PageText[]> {
+  const pages: PageText[] = [];
+  for (let page = 1; page <= doc.numPages; page++) {
+    if (options.signal.aborted) break;
+    let text = "";
+    try {
+      text = await readPageText(doc, page);
+    } catch {
+      // A page with a broken text layer counts as having no text.
+    }
+    pages.push({ page, text });
+    options.onProgress(page / doc.numPages);
+  }
+  return pages;
+}
+
 /**
- * Scans the text layer of every page in order. Pages are released as soon as
- * they are read, so the scan keeps memory flat on long documents.
+ * Scans every page in order. A page with no text layer is searched through the
+ * text recognition read for it earlier, when there is one.
  */
 export async function searchPdf(doc: PDFDocumentProxy, query: string, options: SearchOptions): Promise<void> {
   for (let page = 1; page <= doc.numPages; page++) {
     if (options.signal.aborted) return;
-    const pdfPage = await doc.getPage(page);
     try {
-      const content = await pdfPage.getTextContent();
-      const text = content.items
-        .map((item) => ("str" in item ? item.str + (item.hasEOL ? "\n" : "") : ""))
-        .join("");
+      const layer = await readPageText(doc, page);
+      const text = needsOcr(layer) ? (options.ocrPages?.[String(page)] ?? layer) : layer;
       for (const match of findMatches(text, query)) {
         if (options.signal.aborted) return;
         options.onHit({ position: String(page), section: page, before: match.before, match: match.match, after: match.after });
       }
     } catch {
-      // A page with a broken text layer is skipped; the rest of the document is still searched.
-    } finally {
-      pdfPage.cleanup();
+      // A page that cannot be read is skipped; the rest of the document is still searched.
     }
     options.onProgress(page / doc.numPages);
   }

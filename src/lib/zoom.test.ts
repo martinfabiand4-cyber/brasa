@@ -8,14 +8,19 @@ function wheel(deltaY: number, ctrlKey: boolean) {
 
 describe("stepZoom", () => {
   it("moves in tenths and stays on the grid", () => {
-    expect(stepZoom(1, 1)).toBe(1.1);
-    expect(stepZoom(1.1, -1)).toBe(1);
-    expect(stepZoom(0.7, -1)).toBe(0.6);
+    expect(stepZoom(1.5, 1)).toBe(1.6);
+    expect(stepZoom(1.5, -1)).toBe(1.4);
+    expect(stepZoom(2.3, -1)).toBe(2.2);
   });
 
-  it("never leaves the zoom range", () => {
+  it("never zooms out past the whole page, so it always stays inside its margins", () => {
+    expect(ZOOM_MIN).toBe(1);
+    expect(stepZoom(1.1, -1)).toBe(1);
+    expect(stepZoom(1, -1)).toBe(1);
+  });
+
+  it("never zooms in past the maximum", () => {
     expect(stepZoom(ZOOM_MAX, 1)).toBe(ZOOM_MAX);
-    expect(stepZoom(ZOOM_MIN, -1)).toBe(ZOOM_MIN);
   });
 });
 
@@ -29,35 +34,48 @@ describe("stepFontSize", () => {
 });
 
 describe("createWheelZoom", () => {
-  it("ignores the wheel without Ctrl so scrolling and page turns keep working", () => {
+  it("zooms with the plain wheel when the page does not scroll", () => {
     const onStep = vi.fn();
     const handle = createWheelZoom(onStep);
-    const event = wheel(120, false);
-    handle(event);
-    expect(onStep).not.toHaveBeenCalled();
-    expect(event.preventDefault).not.toHaveBeenCalled();
+    handle(wheel(-120, false));
+    handle(wheel(120, false));
+    expect(onStep.mock.calls).toEqual([[1], [-1]]);
   });
 
-  it("zooms in when the wheel moves up and out when it moves down, with Ctrl held", () => {
+  it("zooms only with Ctrl while the page scrolls, so the wheel can still scroll", () => {
     const onStep = vi.fn();
-    const handle = createWheelZoom(onStep);
+    const handle = createWheelZoom(onStep, () => true);
+    const plain = wheel(-120, false);
+    handle(plain);
+    expect(onStep).not.toHaveBeenCalled();
+    expect(plain.preventDefault).not.toHaveBeenCalled();
+
     handle(wheel(-120, true));
-    handle(wheel(120, true));
-    expect(onStep.mock.calls).toEqual([[1], [-1]]);
+    expect(onStep).toHaveBeenCalledWith(1);
+  });
+
+  it("reads the scrolling mode at each event, so switching flow takes effect at once", () => {
+    const onStep = vi.fn();
+    let scrolling = false;
+    const handle = createWheelZoom(onStep, () => scrolling);
+    handle(wheel(-120, false));
+    scrolling = true;
+    handle(wheel(-120, false));
+    expect(onStep.mock.calls).toEqual([[1]]);
   });
 
   it("waits for enough movement, so trackpads do not zoom on every tiny event", () => {
     const onStep = vi.fn();
     const handle = createWheelZoom(onStep);
-    for (let i = 0; i < 5; i++) handle(wheel(-4, true));
+    for (let i = 0; i < 5; i++) handle(wheel(-4, false));
     expect(onStep).not.toHaveBeenCalled();
-    handle(wheel(-40, true));
+    handle(wheel(-40, false));
     expect(onStep).toHaveBeenCalledWith(1);
   });
 
-  it("stops the browser from zooming the whole window", () => {
+  it("stops the browser from zooming or scrolling the page while it zooms", () => {
     const handle = createWheelZoom(() => undefined);
-    const event = wheel(-120, true);
+    const event = wheel(-120, false);
     handle(event);
     expect(event.preventDefault).toHaveBeenCalled();
   });

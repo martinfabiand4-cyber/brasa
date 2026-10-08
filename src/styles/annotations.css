@@ -1,0 +1,613 @@
+/*
+ * Notes, comments, ink, the saved-tools strip and the tool panels.
+ *
+ * Sizes inside a note or comment are written in reference units against a page
+ * 600 px wide (--page-w is the page's real width). Multiplying by --page-w and
+ * dividing by 600 scales them with the page, so zoom keeps them in proportion.
+ */
+
+/* The page wrappers hold the layer that sits over each page. */
+.pdf-page,
+.pdf-scroll__page {
+  position: relative;
+}
+
+/* Layer over one page: it ignores the pointer, so the page keeps its own behavior.
+   Overflow is clipped to the page, so a long comment can never scroll the reader. */
+.ann-layer {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 2;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+/* While the marker is in use the layer takes the pointer, and the dots step aside. */
+.ann-layer--drawing {
+  pointer-events: auto;
+  cursor: crosshair;
+  touch-action: none;
+}
+
+.ann-layer--drawing .ann-item {
+  pointer-events: none;
+}
+
+.ann-ink {
+  position: absolute;
+  left: 0;
+  top: 0;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.ann-ink__path {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* The marker lets the text show through, like a highlighter on paper. */
+.ann-ink__path--marker {
+  mix-blend-mode: multiply;
+  opacity: 0.5;
+}
+
+.ann-ink__path--pen {
+  opacity: 0.95;
+}
+
+/* One note or comment. Its box is as wide as the space to the right of its dot. */
+.ann-item {
+  position: absolute;
+  height: 0;
+}
+
+.ann-item.is-open {
+  z-index: 6;
+}
+
+/* The closed state: a dot the person can grab and drag. */
+.ann-dot {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 16px;
+  height: 16px;
+  margin: -8px 0 0 -8px;
+  padding: 0;
+  border: 2px solid rgb(255 255 255 / 0.9);
+  border-radius: 50%;
+  background: var(--ann-bg);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.4);
+  cursor: grab;
+  pointer-events: auto;
+  touch-action: none;
+  transition: transform 240ms var(--ease-out), opacity 160ms ease;
+}
+
+.ann-dot:active {
+  cursor: grabbing;
+}
+
+.ann-dot:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 3px;
+}
+
+.ann-item.is-open .ann-dot {
+  transform: scale(0);
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* The open state: the note or bubble grows out of the dot. */
+.ann-body {
+  position: absolute;
+  left: 8px;
+  top: 8px;
+  box-sizing: border-box;
+  width: fit-content;
+  min-width: calc(var(--page-w) * 0.2);
+  max-width: calc(100% - 16px);
+  background: var(--ann-bg);
+  color: var(--ann-ink);
+  transform-origin: 0 0;
+  transform: scale(0.08);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: transform 280ms var(--ease-out), opacity 200ms ease, visibility 0s linear 280ms;
+}
+
+.ann-item.is-open .ann-body {
+  transform: none;
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transition: transform 340ms var(--ease-out), opacity 200ms ease, visibility 0s;
+}
+
+/* A note rolls up like paper when it closes, instead of shrinking into its dot. */
+.ann-item--note .ann-body {
+  transform: scale(0.2, 0.03);
+}
+
+.ann-item--note.is-open .ann-body {
+  transform: none;
+}
+
+.ann-bar {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  height: 14px;
+  padding: 0 4px;
+  cursor: grab;
+}
+
+.ann-bar__remove {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 14px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+  opacity: 0.5;
+  cursor: pointer;
+}
+
+.ann-bar__remove:hover,
+.ann-bar__remove:focus-visible {
+  opacity: 1;
+  background: rgb(0 0 0 / 0.08);
+}
+
+/* The text itself. It grows sideways until it reaches the edge of the page, then downward. */
+.ann-text {
+  min-width: 1ch;
+  padding: calc(var(--ann-margin) * var(--page-w) / 600);
+  font-family: var(--ann-font);
+  font-size: calc(var(--ann-size) * var(--page-w) / 600);
+  line-height: var(--ann-lh);
+  color: var(--ann-ink);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  outline: none;
+  cursor: text;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.ann-text[data-empty]::before {
+  content: attr(data-placeholder);
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+/* Post-it: a bright square with a folded corner. */
+.ann-body--postit {
+  border-radius: 2px;
+  box-shadow: 0 16px 26px -14px rgb(0 0 0 / 0.55), 0 2px 5px rgb(0 0 0 / 0.22);
+}
+
+.ann-body--postit::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 16px;
+  height: 16px;
+  background: linear-gradient(135deg, transparent 50%, rgb(0 0 0 / 0.14) 50%);
+}
+
+/* Old paper: a warm, slightly worn sheet with darker edges. */
+.ann-body--paper {
+  border: 1px solid rgb(110 70 30 / 0.35);
+  border-radius: 4px;
+  background:
+    radial-gradient(ellipse at 25% 15%, rgb(255 255 255 / 0.35), transparent 60%),
+    radial-gradient(ellipse at 85% 95%, rgb(120 70 20 / 0.22), transparent 55%),
+    var(--ann-bg);
+  box-shadow: inset 0 0 26px rgb(120 80 30 / 0.35), 0 10px 20px -12px rgb(0 0 0 / 0.5);
+}
+
+/* Squared paper: a blue grid with a red margin line. */
+.ann-body--grid {
+  border-left: 2px solid rgb(220 60 60 / 0.45);
+  border-radius: 2px;
+  background-color: var(--ann-bg);
+  background-image:
+    linear-gradient(to right, rgb(40 110 200 / 0.22) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(40 110 200 / 0.22) 1px, transparent 1px);
+  background-size: calc(var(--page-w) * 0.03) calc(var(--page-w) * 0.03);
+  box-shadow: 0 10px 20px -12px rgb(0 0 0 / 0.5);
+}
+
+/* Speech bubble: round, with a small tail at the corner that points at the dot. */
+.ann-body--bubble {
+  border-radius: 16px;
+  box-shadow: 0 10px 22px -10px rgb(0 0 0 / 0.5), 0 0 0 1px rgb(0 0 0 / 0.08);
+}
+
+.ann-body--bubble::before {
+  content: "";
+  position: absolute;
+  left: -5px;
+  top: -5px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--ann-bg);
+}
+
+/* Text box: a square frame in the chosen color. */
+.ann-body--box {
+  border: 2px solid rgb(0 0 0 / 0.28);
+  border-radius: 6px;
+  box-shadow: 0 10px 20px -12px rgb(0 0 0 / 0.5);
+}
+
+/* Shown while a note is dragged from the tools, so the person sees what they hold. */
+.ann-ghost {
+  position: fixed;
+  z-index: 30;
+  width: 18px;
+  height: 18px;
+  margin: -9px 0 0 -9px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 6px 16px rgb(0 0 0 / 0.45);
+  pointer-events: none;
+}
+
+/* The saved notes and comments, under the tool column. */
+.stash {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 9px;
+  margin-top: 10px;
+  padding: 10px 8px;
+  border-radius: 22px;
+}
+
+.stash__dot {
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 2px solid rgb(255 255 255 / 0.85);
+  border-radius: 50%;
+  box-shadow: 0 3px 8px rgb(0 0 0 / 0.4);
+  cursor: grab;
+  touch-action: none;
+  transition: transform var(--duration-fast) var(--ease-out);
+}
+
+.stash__dot:hover {
+  transform: scale(1.15);
+}
+
+.stash__dot:active {
+  cursor: grabbing;
+}
+
+.stash__dot:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 3px;
+}
+
+/* The tool panels: they sit beside the tool column, over the gutter and the page edge. */
+/* Centered vertically with auto margins, not a transform: the entrance animation owns transform. */
+.tool-sheet {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 84px;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  width: 380px;
+  height: max-content;
+  max-height: calc(100% - 40px);
+  margin: auto 0;
+  overflow: hidden;
+  border-radius: 20px;
+  animation: rise var(--duration-base) var(--ease-out) both;
+}
+
+.tool-sheet__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 14px 8px 18px;
+}
+
+.tool-sheet__header h2 {
+  font-size: 16px;
+  font-weight: 650;
+}
+
+.tool-sheet__body {
+  display: grid;
+  gap: 14px;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0 18px 12px;
+}
+
+.tool-sheet__section {
+  display: grid;
+  gap: 8px;
+}
+
+.tool-sheet__section h3,
+.tool-sheet__label {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.tool-sheet__hint {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--text-secondary);
+}
+
+.tool-sheet__value {
+  margin-left: 6px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+}
+
+.tool-sheet__footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 18px 16px;
+  border-top: 1px solid var(--glass-edge);
+}
+
+.design-cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.design-card {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  padding: 8px 6px;
+  border: 1px solid var(--glass-edge);
+  border-radius: 14px;
+  background: transparent;
+  color: var(--text-primary);
+}
+
+.design-card[aria-checked="true"] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.design-card__name {
+  font-size: 12px;
+}
+
+/* The little picture of each design inside its card. */
+.design-card__sample {
+  position: relative;
+  left: 0;
+  top: 0;
+  display: grid;
+  gap: 5px;
+  align-content: center;
+  width: 78px;
+  height: 52px;
+  min-width: 0;
+  max-width: none;
+  padding: 8px;
+  visibility: visible;
+  opacity: 1;
+  transform: none;
+  pointer-events: none;
+}
+
+.design-card__sample > span {
+  height: 4px;
+  border-radius: 2px;
+  background: rgb(0 0 0 / 0.28);
+}
+
+.design-card__sample > span:last-child {
+  width: 60%;
+}
+
+.swatches--small .swatch {
+  width: 22px;
+  height: 22px;
+}
+
+.font-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.font-chip,
+.ink-chip {
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid var(--glass-edge);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 14px;
+}
+
+.font-chip {
+  min-width: 46px;
+  font-size: 16px;
+}
+
+.font-chip[aria-checked="true"],
+.ink-chip[aria-checked="true"] {
+  border-color: transparent;
+  background: linear-gradient(180deg, var(--brasa-500), var(--brasa-600));
+  color: #fff;
+}
+
+.slider-row {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr) 36px;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.slider-row output {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+}
+
+/* The live preview: the page-sized stage is drawn at a fixed scale to fit the sheet. */
+.ann-preview {
+  position: relative;
+  width: 336px;
+  height: 258px;
+  overflow: hidden;
+  border: 1px solid var(--glass-edge);
+  border-radius: 12px;
+  background: #f7f4ee;
+  pointer-events: none;
+}
+
+.ann-preview__stage {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 600px;
+  height: 460px;
+  transform: scale(0.56);
+  transform-origin: 0 0;
+}
+
+.ann-preview .ann-item {
+  pointer-events: none;
+}
+
+.saved-list {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.saved-list li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+}
+
+.saved-list__dot {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgb(255 255 255 / 0.8);
+  border-radius: 50%;
+}
+
+.saved-list__name {
+  flex: 1;
+  min-width: 0;
+}
+
+.ink-preview {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 12px;
+  background: rgb(255 255 255 / 0.05);
+}
+
+.marker-sheet__actions .glass-button {
+  flex: 1;
+  white-space: nowrap;
+}
+
+.ocr-progress {
+  height: 4px;
+  overflow: hidden;
+  border-radius: 2px;
+  background: var(--surface-sunk);
+}
+
+.ocr-progress span {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: var(--accent);
+  transform-origin: left center;
+  transition: transform var(--duration-base) var(--ease-out);
+}
+
+.ocr-sheet__action {
+  width: 100%;
+  justify-content: center;
+}
+
+.ocr-index {
+  display: grid;
+  gap: 2px;
+  max-height: 240px;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.ocr-index button {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 13px;
+  text-align: left;
+}
+
+.ocr-index button:hover,
+.ocr-index button:focus-visible {
+  background: var(--surface-hover);
+}
+
+.ocr-index small {
+  white-space: nowrap;
+  color: var(--text-secondary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ann-dot,
+  .ann-body,
+  .ann-item.is-open .ann-body,
+  .stash__dot,
+  .ocr-progress span {
+    transition: none;
+  }
+}

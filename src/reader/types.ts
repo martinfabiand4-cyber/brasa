@@ -1,6 +1,7 @@
 import type { TapZone } from "../lib/reading";
 import type { ZoomDirection } from "../lib/zoom";
 import type { OutlineEntry } from "../engine/pdfEngine";
+import type { PageText } from "../lib/textAnalysis";
 
 /** One occurrence of a search term, with the text around it for the results list. */
 export interface SearchHit {
@@ -17,6 +18,14 @@ export interface SearchOptions {
   signal: AbortSignal;
   onHit: (hit: SearchHit) => void;
   /** Share of the book scanned, from 0 to 1. */
+  onProgress: (ratio: number) => void;
+  /** Text read by recognition for pages with no text layer, keyed by page number. */
+  ocrPages?: Record<string, string>;
+}
+
+export interface RecognizeOptions {
+  signal: AbortSignal;
+  onPage: (page: number, text: string) => void;
   onProgress: (ratio: number) => void;
 }
 
@@ -35,6 +44,10 @@ export interface ReaderNavigation {
 export interface ReaderHandle extends ReaderNavigation {
   /** Scans the whole book. Resolves when finished or when the signal aborts. */
   search(query: string, options: SearchOptions): Promise<void>;
+  /** PDF only: the text layer of every page. */
+  scanText?(options: { signal: AbortSignal; onProgress: (ratio: number) => void }): Promise<PageText[]>;
+  /** PDF only: reads the given pages as images and reports the text of each one. */
+  recognize?(pages: readonly number[], options: RecognizeOptions): Promise<void>;
 }
 
 export interface TocItem {
@@ -55,7 +68,7 @@ export interface ReaderCallbacks {
   onPosition: (position: string, progress: number) => void;
   onTap: (zone: TapZone) => void;
   onError: () => void;
-  /** Ctrl + wheel over the text: +1 zooms in, -1 zooms out. */
+  /** Wheel over the page: +1 zooms in, -1 zooms out. */
   onZoomStep: (direction: ZoomDirection) => void;
 }
 

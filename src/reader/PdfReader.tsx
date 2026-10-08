@@ -1,6 +1,7 @@
 import { useEffect, useImperativeHandle, useLayoutEffect, useRef, useState, type Ref } from "react";
 import type { PDFDocumentProxy } from "pdfjs-dist";
-import { openPdf, readPdfOutline, searchPdf } from "../engine/pdfEngine";
+import { openPdf, readPdfOutline, scanPdfText, searchPdf } from "../engine/pdfEngine";
+import { recognizePdfPages } from "../engine/ocrEngine";
 import { pdfProgress } from "../lib/reading";
 import type { Flow, PageTurn } from "../lib/types";
 import { createWheelZoom } from "../lib/zoom";
@@ -41,12 +42,20 @@ export default function PdfReader({
   const [size, setSize] = useState({ width: 0, height: 0 });
   const { width, height } = size;
 
-  // Latest zoom callback, read by the wheel listener, which is attached once.
+  // Latest zoom callback and flow, read by the wheel listener, which is attached once.
   const zoomStep = useRef(onZoomStep);
+  const flowRef = useRef(flow);
   useEffect(() => {
     zoomStep.current = onZoomStep;
+    flowRef.current = flow;
   });
-  const [onWheel] = useState(() => createWheelZoom((direction) => zoomStep.current(direction)));
+  // Page by page the wheel zooms on its own; while the pages scroll it needs Ctrl.
+  const [onWheel] = useState(() =>
+    createWheelZoom(
+      (direction) => zoomStep.current(direction),
+      () => flowRef.current === "scroll",
+    ),
+  );
 
   // Opening happens once per book. A cancelled load destroys its own document.
   useEffect(() => {
@@ -110,6 +119,14 @@ export default function PdfReader({
         const current = docRef.current;
         if (!current) return Promise.resolve();
         return searchPdf(current, query, options);
+      },
+      scanText: (options) => {
+        const current = docRef.current;
+        return current ? scanPdfText(current, options) : Promise.resolve([]);
+      },
+      recognize: (pages, options) => {
+        const current = docRef.current;
+        return current ? recognizePdfPages(current, pages, options) : Promise.resolve();
       },
     }),
     [doc],

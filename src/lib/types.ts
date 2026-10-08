@@ -1,3 +1,5 @@
+import type { StyleTemplate } from "./annotations";
+
 export type BookFormat = "epub" | "pdf";
 
 export type SortMode = "alphabetical" | "recentlyOpened" | "recentlyAdded";
@@ -67,5 +69,7 @@ export interface LibraryData {
   version: 1;
   books: Book[];
   bookmarks: Bookmark[];
+  /** Notes and comments the person saved as tools, shared by every book. */
+  templates: StyleTemplate[];
   settings: Settings;
 }

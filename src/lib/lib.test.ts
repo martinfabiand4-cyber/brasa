@@ -147,7 +147,8 @@ describe("settings", () => {
     expect(clean.theme).toBe(DEFAULT_SETTINGS.theme);
     expect(clean.pageTurn).toBe(DEFAULT_SETTINGS.pageTurn);
     expect(clean.fontSize).toBe(200);
-    expect(clean.zoom).toBe(0.6);
+    // Zoom never goes below the whole page fitting its margins.
+    expect(clean.zoom).toBe(1);
   });
 
   it("resolves auto locale from the system language and only supports es or en", () => {
