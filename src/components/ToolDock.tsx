@@ -12,13 +12,15 @@ export interface DockItem {
 interface ToolDockProps {
   label: string;
   items: DockItem[];
+  /** Anything that belongs under the tools, such as the saved notes. */
+  children?: ReactNode;
 }
 
 /**
  * The reading tools, as a floating glass column at the edge of the reader.
  * It slides away with the rest of the chrome, so it never covers the page when hidden.
  */
-export default function ToolDock({ label, items }: ToolDockProps) {
+export default function ToolDock({ label, items, children }: ToolDockProps) {
   return (
     <nav className="dock" aria-label={label}>
       <div className="glass dock__pill">
@@ -40,6 +42,7 @@ export default function ToolDock({ label, items }: ToolDockProps) {
           </button>
         ))}
       </div>
+      {children}
     </nav>
   );
 }

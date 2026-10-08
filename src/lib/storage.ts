@@ -10,6 +10,7 @@ import {
   writeTextFile,
 } from "@tauri-apps/plugin-fs";
 import { normalizeBookmark } from "./bookmarks";
+import { normalizeTemplate, type StyleTemplate } from "./annotations";
 import { DEFAULT_SETTINGS, sanitizeSettings } from "./settings";
 import type { LibraryData } from "./types";
 
@@ -23,11 +24,14 @@ const TEMP_FILE = "library.json.tmp";
 const BACKUP_FILE = "library.bak.json";
 export const BOOKS_DIR = "books";
 export const COVERS_DIR = "covers";
+/** Per-book notes and ink, and per-book text analysis, each kept in its own file. */
+export const NOTES_DIR = "notes";
+export const ANALYSIS_DIR = "analysis";
 
 const DIR = { baseDir: BaseDirectory.AppData };
 
 export function emptyLibrary(): LibraryData {
-  return { version: 1, books: [], bookmarks: [], settings: { ...DEFAULT_SETTINGS } };
+  return { version: 1, books: [], bookmarks: [], templates: [], settings: { ...DEFAULT_SETTINGS } };
 }
 
 function parseLibrary(raw: string): LibraryData {
@@ -36,6 +40,9 @@ function parseLibrary(raw: string): LibraryData {
     version: 1,
     books: Array.isArray(parsed.books) ? parsed.books : [],
     bookmarks: Array.isArray(parsed.bookmarks) ? parsed.bookmarks.map(normalizeBookmark) : [],
+    templates: Array.isArray(parsed.templates)
+      ? parsed.templates.map(normalizeTemplate).filter((item): item is StyleTemplate => item !== null)
+      : [],
     settings: sanitizeSettings(parsed.settings),
   };
 }
@@ -114,4 +121,43 @@ export function coverFileName(bookId: string, bytes: Uint8Array): string {
   const type = sniffImageType(bytes);
   const ext = type === "image/png" ? "png" : type === "image/gif" ? "gif" : type === "image/webp" ? "webp" : "jpg";
   return `${COVERS_DIR}/${bookId}.${ext}`;
+}
+
+/** Reads a per-book file. A damaged one is kept aside as ".bak" so nothing the person wrote is lost. */
+export async function readSidecar(path: string): Promise<unknown | null> {
+  if (!(await exists(path, DIR))) return null;
+  try {
+    return JSON.parse(await readTextFile(path, DIR)) as unknown;
+  } catch {
+    await rename(path, `${path}.bak`, {
+      oldPathBaseDir: BaseDirectory.AppData,
+      newPathBaseDir: BaseDirectory.AppData,
+    });
+    return null;
+  }
+}
+
+let sidecarChain: Promise<void> = Promise.resolve();
+
+/** Writes a per-book file through a temporary file, serialized with other per-book writes. */
+export function writeSidecar(path: string, data: unknown): Promise<void> {
+  const snapshot = JSON.stringify(data);
+  const folder = path.slice(0, path.lastIndexOf("/"));
+  sidecarChain = sidecarChain.then(async () => {
+    await mkdir(folder, { ...DIR, recursive: true });
+    await writeTextFile(`${path}.tmp`, snapshot, DIR);
+    await rename(`${path}.tmp`, path, {
+      oldPathBaseDir: BaseDirectory.AppData,
+      newPathBaseDir: BaseDirectory.AppData,
+    });
+  });
+  return sidecarChain;
+}
+
+/** Removes everything kept for one book besides the book itself. */
+export async function removeSidecars(bookId: string): Promise<void> {
+  for (const folder of [NOTES_DIR, ANALYSIS_DIR]) {
+    const path = `${folder}/${bookId}.json`;
+    if (await exists(path, DIR)) await remove(path, DIR);
+  }
 }

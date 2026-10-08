@@ -1,6 +1,7 @@
 import { useEffect, useImperativeHandle, useMemo, useRef, useState, type MouseEvent, type Ref } from "react";
 import type { PDFDocumentProxy, RenderTask } from "pdfjs-dist";
 import { pageCssSize, renderPage } from "../engine/pdfEngine";
+import AnnotationLayer from "../components/annotations/AnnotationLayer";
 import { clampPage, tapZoneFor, type TapZone } from "../lib/reading";
 import type { ReaderNavigation } from "./types";
 
@@ -177,6 +178,7 @@ export default function PdfScrolled({ ref, doc, initialPage, width, zoom, onPosi
           key={index}
           className="pdf-scroll__page"
           data-index={index}
+          data-ann-anchor={String(index + 1)}
           style={{ width: size.width, height: size.height }}
         >
           <canvas
@@ -186,6 +188,7 @@ export default function PdfScrolled({ ref, doc, initialPage, width, zoom, onPosi
               else canvases.current.delete(index);
             }}
           />
+          <AnnotationLayer anchor={String(index + 1)} width={size.width} height={size.height} />
         </div>
       ))}
     </div>

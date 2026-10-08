@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useImperativeHandle, useRef, useState, type MouseEvent, type Ref } from "react";
 import type { PDFDocumentProxy, RenderTask } from "pdfjs-dist";
 import { renderPage } from "../engine/pdfEngine";
+import AnnotationLayer from "../components/annotations/AnnotationLayer";
 import { createTurnRunner, type TurnDirection } from "../lib/animateTurn";
 import { clampPage, tapZoneFor, type TapZone } from "../lib/reading";
 import type { PageTurn } from "../lib/types";
@@ -39,6 +40,9 @@ export default function PdfPaged({
   const turnRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const current = useRef(clampPage(initialPage, doc.numPages));
+  // The page on screen, as state, so notes and ink for it are shown when the page changes.
+  const [shown, setShown] = useState(current.current);
+  const [pageSize, setPageSize] = useState({ width: 0, height: 0 });
   const renderTask = useRef<RenderTask | null>(null);
   const latest = useRef(0);
   const turnPreference = useRef(pageTurn);
@@ -64,6 +68,8 @@ export default function PdfPaged({
       // Width that keeps the whole page inside the available height.
       const natural = page.getViewport({ scale: 1 });
       const fitWidth = Math.min(width, height * (natural.width / natural.height));
+      const cssWidth = fitWidth * zoom;
+      setPageSize({ width: Math.floor(cssWidth), height: Math.floor((natural.height * cssWidth) / natural.width) });
       renderTask.current?.cancel();
       const task = renderPage(page, canvas, fitWidth, zoom);
       renderTask.current = task;
@@ -92,6 +98,7 @@ export default function PdfPaged({
       if (next === current.current) return;
       void runTurn(direction, async () => {
         current.current = next;
+        setShown(next);
         await draw(next);
         onPosition(next, doc.numPages);
       });
@@ -124,8 +131,9 @@ export default function PdfPaged({
 
   return (
     <div className="pdf-stage" ref={stageRef} onClick={handleClick}>
-      <div className="pdf-page" ref={turnRef}>
+      <div className="pdf-page" ref={turnRef} data-ann-anchor={String(shown)}>
         <canvas ref={canvasRef} className="pdf-page__canvas" />
+        <AnnotationLayer anchor={String(shown)} width={pageSize.width} height={pageSize.height} />
       </div>
     </div>
   );

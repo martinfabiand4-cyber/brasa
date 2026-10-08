@@ -3,7 +3,8 @@ import { baseName, createId } from "../lib/format";
 import { normalizeBookmark } from "../lib/bookmarks";
 import { importBook, ImportError } from "../lib/importer";
 import { DEFAULT_SETTINGS } from "../lib/settings";
-import { deleteBookFile, emptyLibrary, loadLibrary, saveLibrary } from "../lib/storage";
+import { deleteBookFile, emptyLibrary, loadLibrary, removeSidecars, saveLibrary } from "../lib/storage";
+import type { StyleTemplate } from "../lib/annotations";
 import type { Book, Bookmark, LibraryData, Settings } from "../lib/types";
 
 export interface LibraryState {
@@ -22,6 +23,8 @@ type Action =
   | { type: "bookmark-added"; bookmark: Bookmark }
   | { type: "bookmark-removed"; id: string }
   | { type: "bookmark-updated"; id: string; patch: Partial<Bookmark> }
+  | { type: "template-added"; template: StyleTemplate }
+  | { type: "template-removed"; id: string }
   | { type: "settings"; patch: Partial<Settings> }
   | { type: "issues-cleared" };
 
@@ -73,6 +76,13 @@ function reducer(state: LibraryState, action: Action): LibraryState {
       return {
         ...state,
         data: { ...state.data, bookmarks: state.data.bookmarks.filter((m) => m.id !== action.id) },
+      };
+    case "template-added":
+      return { ...state, data: { ...state.data, templates: [...state.data.templates, action.template] } };
+    case "template-removed":
+      return {
+        ...state,
+        data: { ...state.data, templates: state.data.templates.filter((item) => item.id !== action.id) },
       };
     case "settings":
       return { ...state, data: { ...state.data, settings: { ...state.data.settings, ...action.patch } } };
@@ -163,6 +173,7 @@ export function useLibrary() {
     dispatch({ type: "book-removed", id: book.id });
     await deleteBookFile(book.storedPath);
     if (book.coverPath) await deleteBookFile(book.coverPath);
+    await removeSidecars(book.id);
   }, []);
 
   const addBookmark = useCallback((input: Omit<Bookmark, "id" | "createdAt">) => {
@@ -177,6 +188,14 @@ export function useLibrary() {
 
   const removeBookmark = useCallback((id: string) => {
     dispatch({ type: "bookmark-removed", id });
+  }, []);
+
+  const addTemplate = useCallback((template: StyleTemplate) => {
+    dispatch({ type: "template-added", template });
+  }, []);
+
+  const removeTemplate = useCallback((id: string) => {
+    dispatch({ type: "template-removed", id });
   }, []);
 
   const updateSettings = useCallback((patch: Partial<Settings>) => {
@@ -194,6 +213,8 @@ export function useLibrary() {
     addBookmark,
     updateBookmark,
     removeBookmark,
+    addTemplate,
+    removeTemplate,
     updateSettings,
     clearIssues,
   };

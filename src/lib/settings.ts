@@ -1,3 +1,4 @@
+import { FONT_MAX, FONT_MIN, ZOOM_MAX, ZOOM_MIN } from "./zoom";
 import type { Flow, Locale, PageTurn, Settings, SortMode, Theme } from "./types";
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -37,8 +38,8 @@ export function sanitizeSettings(raw: unknown): Settings {
     sort: pick(input.sort, SORTS, DEFAULT_SETTINGS.sort),
     pageTurn: pick(input.pageTurn, PAGE_TURNS, DEFAULT_SETTINGS.pageTurn),
     flow: pick(input.flow, FLOWS, DEFAULT_SETTINGS.flow),
-    fontSize: clamp(input.fontSize as number, 70, 200, DEFAULT_SETTINGS.fontSize),
-    zoom: clamp(input.zoom as number, 0.6, 3, DEFAULT_SETTINGS.zoom),
+    fontSize: clamp(input.fontSize as number, FONT_MIN, FONT_MAX, DEFAULT_SETTINGS.fontSize),
+    zoom: clamp(input.zoom as number, ZOOM_MIN, ZOOM_MAX, DEFAULT_SETTINGS.zoom),
     brightness: clamp(input.brightness as number, 30, 100, DEFAULT_SETTINGS.brightness),
   };
 }

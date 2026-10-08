@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useImperativeHandle, useRef, useState, type Ref } from "react";
+import { useCallback, useEffect, useImperativeHandle, useLayoutEffect, useRef, useState, type Ref } from "react";
 import type { Book, Rendition } from "epubjs";
 import {
   applyReadingStyle,
@@ -10,6 +10,8 @@ import {
   readSpineLength,
   searchEpub,
 } from "../engine/epubEngine";
+import AnnotationLayer from "../components/annotations/AnnotationLayer";
+import { REFERENCE_WIDTH } from "../lib/annotations";
 import { createTurnRunner, type TurnDirection } from "../lib/animateTurn";
 import type { Flow, PageTurn, Theme } from "../lib/types";
 import { createWheelZoom } from "../lib/zoom";
@@ -23,6 +25,8 @@ interface EpubReaderProps extends ReaderCallbacks {
   theme: Theme;
   fontSize: number;
   pageTurn: PageTurn;
+  /** The start of the page on screen, which notes and ink are attached to. */
+  anchor: string | null;
 }
 
 /**
@@ -38,6 +42,7 @@ export default function EpubReader({
   theme,
   fontSize,
   pageTurn,
+  anchor,
   onReady,
   onPosition,
   onTap,
@@ -46,6 +51,7 @@ export default function EpubReader({
 }: EpubReaderProps) {
   const hostRef = useRef<HTMLDivElement>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
+  const [frameSize, setFrameSize] = useState({ width: 0, height: 0 });
   const renditionRef = useRef<Rendition | null>(null);
   const bookRef = useRef<Book | null>(null);
   const [book, setBook] = useState<Book | null>(null);
@@ -54,9 +60,9 @@ export default function EpubReader({
   const spineCount = useRef(0);
 
   // Latest callbacks and preferences, read by engine handlers that outlive a render.
-  const live = useRef({ pageTurn, onTap, onPosition, onReady, onError, onZoomStep });
+  const live = useRef({ pageTurn, onTap, onPosition, onReady, onError, onZoomStep, flow });
   useEffect(() => {
-    live.current = { pageTurn, onTap, onPosition, onReady, onError, onZoomStep };
+    live.current = { pageTurn, onTap, onPosition, onReady, onError, onZoomStep, flow };
   });
 
   const [runTurn] = useState(() =>
@@ -66,8 +72,13 @@ export default function EpubReader({
     ),
   );
 
-  // One wheel handler for the whole reader; it keeps its own step accumulator.
-  const [onWheel] = useState(() => createWheelZoom((direction) => live.current.onZoomStep(direction)));
+  // One wheel handler for the whole reader. Page by page it zooms on its own; while the text scrolls it needs Ctrl.
+  const [onWheel] = useState(() =>
+    createWheelZoom(
+      (direction) => live.current.onZoomStep(direction),
+      () => live.current.flow === "scroll",
+    ),
+  );
 
   const turn = useCallback(
     (direction: TurnDirection) =>
@@ -155,7 +166,18 @@ export default function EpubReader({
     return () => observer.disconnect();
   }, [rendition]);
 
-  // Ctrl + wheel over the edge zones, which sit above the frame and catch the wheel first.
+  // The annotation layer covers the reader body, so it is measured the same way.
+  useLayoutEffect(() => {
+    const el = bodyRef.current;
+    if (!el) return;
+    const update = () => setFrameSize({ width: el.clientWidth, height: el.clientHeight });
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  // Wheel over the edge zones, which sit above the frame and catch the wheel first.
   useEffect(() => {
     const body = bodyRef.current;
     if (!body) return;
@@ -186,13 +208,22 @@ export default function EpubReader({
   // not deliver clicks (WebKitGTK), and they keep working in every engine.
   return (
     <div className="reader-body" ref={bodyRef}>
-      <div className="reader-frame" ref={hostRef} />
+      <div className="reader-frame" ref={hostRef} data-ann-anchor={anchor ?? undefined} />
       {flow === "paginated" && (
         <>
           <div className="reader-edge reader-edge--previous" aria-hidden="true" onClick={() => onTap("previous")} />
           <div className="reader-edge reader-edge--next" aria-hidden="true" onClick={() => onTap("next")} />
         </>
       )}
+      {anchor ? (
+        <AnnotationLayer
+          anchor={anchor}
+          width={frameSize.width}
+          height={frameSize.height}
+          // The frame fills the window, so notes are sized to a book's page width instead.
+          scale={Math.min(frameSize.width, REFERENCE_WIDTH)}
+        />
+      ) : null}
     </div>
   );
 }

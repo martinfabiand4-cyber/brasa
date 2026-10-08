@@ -9,6 +9,7 @@ import "./styles/base.css";
 import "./styles/library.css";
 import "./styles/reader.css";
 import "./styles/tools.css";
+import "./styles/annotations.css";
 import App from "./App";
 
 createRoot(document.getElementById("root")!).render(
