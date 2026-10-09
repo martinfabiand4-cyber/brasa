@@ -1,8 +1,19 @@
-import { useEffect, useImperativeHandle, useMemo, useRef, useState, type MouseEvent, type Ref } from "react";
+import {
+  useEffect,
+  useImperativeHandle,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type MouseEvent,
+  type Ref,
+  type RefObject,
+} from "react";
 import type { PDFDocumentProxy, RenderTask } from "pdfjs-dist";
 import { pageCssSize, renderPage } from "../engine/pdfEngine";
 import AnnotationLayer from "../components/annotations/AnnotationLayer";
 import { clampPage, tapZoneFor, type TapZone } from "../lib/reading";
+import { restoreZoomAnchor, type ZoomAnchor } from "../lib/zoomAnchor";
 import type { ReaderNavigation } from "./types";
 
 interface PdfScrolledProps {
@@ -11,6 +22,8 @@ interface PdfScrolledProps {
   initialPage: number;
   width: number;
   zoom: number;
+  /** The zoom step waiting to keep its spot under the pointer, if one started. */
+  zoomAnchor: RefObject<ZoomAnchor | null>;
   onPosition: (page: number, total: number) => void;
   onTap: (zone: TapZone) => void;
 }
@@ -28,7 +41,16 @@ interface Size {
  * Continuous vertical reading. Every page keeps its space so the scrollbar and
  * positions stay exact, but only pages near the viewport own a canvas.
  */
-export default function PdfScrolled({ ref, doc, initialPage, width, zoom, onPosition, onTap }: PdfScrolledProps) {
+export default function PdfScrolled({
+  ref,
+  doc,
+  initialPage,
+  width,
+  zoom,
+  zoomAnchor,
+  onPosition,
+  onTap,
+}: PdfScrolledProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvases = useRef<Map<number, HTMLCanvasElement>>(new Map());
   const tasks = useRef<Map<number, RenderTask>>(new Map());
@@ -61,10 +83,17 @@ export default function PdfScrolled({ ref, doc, initialPage, width, zoom, onPosi
     return out;
   }, [sizes]);
 
-  // Keep the reader on the same page while the layout changes size.
-  useEffect(() => {
+  // Keep the reader where it was while the layout changes size: on the spot under the pointer
+  // when a zoom step is waiting for it, otherwise on the same page.
+  useLayoutEffect(() => {
     const el = containerRef.current;
     if (!el || offsets.length === 0) return;
+    const anchor = zoomAnchor.current;
+    zoomAnchor.current = null;
+    if (anchor && anchor.from !== zoom) {
+      restoreZoomAnchor(el, anchor);
+      return;
+    }
     el.scrollTop = offsets[lastReported.current] ?? 0;
   }, [offsets]);
 

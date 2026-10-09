@@ -31,7 +31,7 @@ export function stepFontSize(current: number, direction: ZoomDirection): number 
  * scrolls, so zooming then needs Ctrl, the gesture browsers use for the same thing.
  */
 export function createWheelZoom(
-  onStep: (direction: ZoomDirection) => void,
+  onStep: (direction: ZoomDirection, event: WheelEvent) => void,
   requireCtrl: () => boolean = () => false,
 ): (event: WheelEvent) => void {
   let accumulated = 0;
@@ -40,7 +40,8 @@ export function createWheelZoom(
     event.preventDefault();
     accumulated += event.deltaY;
     if (Math.abs(accumulated) < WHEEL_THRESHOLD) return;
-    onStep(accumulated < 0 ? 1 : -1);
+    // The event that completes a step carries the pointer position the zoom should keep in place.
+    onStep(accumulated < 0 ? 1 : -1, event);
     accumulated = 0;
   };
 }

@@ -69,6 +69,10 @@ const EMPTY_ANALYSIS = emptyAnalysis();
 const MIN_QUERY_LENGTH = 2;
 /** Pointer movement, in pixels, before a press on a saved tool becomes a drag. */
 const DRAG_SLOP = 4;
+/** Within this many CSS pixels of the window's left edge, the hidden tools come back. */
+const TOOLS_REVEAL_WIDTH = 120;
+/** How long the hidden tools stay after the pointer leaves that edge. */
+const TOOLS_HIDE_DELAY_MS = 900;
 
 export default function Reader({ book, lib, onBack }: ReaderProps) {
   const { t } = useI18n();
@@ -83,6 +87,34 @@ export default function Reader({ book, lib, onBack }: ReaderProps) {
   const [toc, setToc] = useState<TocItem[]>([]);
   const [totalPages, setTotalPages] = useState(0);
   const [chromeVisible, setChromeVisible] = useState(true);
+  // While the chrome is hidden, the pointer near the tool column brings it back for a moment.
+  const [peeking, setPeeking] = useState(false);
+  const peekTimer = useRef<number | null>(null);
+  const cancelPeekHide = useCallback(() => {
+    if (peekTimer.current === null) return;
+    window.clearTimeout(peekTimer.current);
+    peekTimer.current = null;
+  }, []);
+  const hidePeekSoon = useCallback(() => {
+    if (peekTimer.current !== null) return;
+    peekTimer.current = window.setTimeout(() => {
+      peekTimer.current = null;
+      setPeeking(false);
+    }, TOOLS_HIDE_DELAY_MS);
+  }, []);
+  const revealNear = useCallback(
+    (clientX: number) => {
+      if (clientX <= TOOLS_REVEAL_WIDTH) {
+        cancelPeekHide();
+        setPeeking(true);
+      } else {
+        hidePeekSoon();
+      }
+    },
+    [cancelPeekHide, hidePeekSoon],
+  );
+  useEffect(() => () => cancelPeekHide(), [cancelPeekHide]);
+  const chromeShown = chromeVisible || peeking;
   const [panel, setPanel] = useState<Panel>(null);
   const [drawerTab, setDrawerTab] = useState<DrawerTab>("contents");
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -507,7 +539,15 @@ export default function Reader({ book, lib, onBack }: ReaderProps) {
   ];
 
   return (
-    <div className={`reader${chromeVisible ? " reader--chrome" : ""}`}>
+    <div
+      className={`reader${chromeShown ? " reader--chrome" : ""}`}
+      onPointerMove={(event) => {
+        if (!chromeVisible) revealNear(event.clientX);
+      }}
+      onPointerLeave={() => {
+        if (!chromeVisible) hidePeekSoon();
+      }}
+    >
       <header className="reader__top">
         <button type="button" className="icon-button" onClick={onBack} aria-label={t("back")}>
           <ArrowLeft size={20} aria-hidden="true" />
@@ -545,6 +585,7 @@ export default function Reader({ book, lib, onBack }: ReaderProps) {
               onTap={handleTap}
               onError={() => setOpenFailed(true)}
               onZoomStep={handleZoomStep}
+              onPointer={revealNear}
             />
           ) : (
             <EpubReader
@@ -561,6 +602,7 @@ export default function Reader({ book, lib, onBack }: ReaderProps) {
               onTap={handleTap}
               onError={() => setOpenFailed(true)}
               onZoomStep={handleZoomStep}
+              onPointer={revealNear}
             />
           )}
           {failed ? null : <div className="reader__dim" style={{ opacity: veil }} aria-hidden="true" />}

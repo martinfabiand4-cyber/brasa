@@ -48,6 +48,7 @@ export default function EpubReader({
   onTap,
   onError,
   onZoomStep,
+  onPointer,
 }: EpubReaderProps) {
   const hostRef = useRef<HTMLDivElement>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
@@ -60,9 +61,9 @@ export default function EpubReader({
   const spineCount = useRef(0);
 
   // Latest callbacks and preferences, read by engine handlers that outlive a render.
-  const live = useRef({ pageTurn, onTap, onPosition, onReady, onError, onZoomStep, flow });
+  const live = useRef({ pageTurn, onTap, onPosition, onReady, onError, onZoomStep, onPointer, flow });
   useEffect(() => {
-    live.current = { pageTurn, onTap, onPosition, onReady, onError, onZoomStep, flow };
+    live.current = { pageTurn, onTap, onPosition, onReady, onError, onZoomStep, onPointer, flow };
   });
 
   const [runTurn] = useState(() =>
@@ -137,6 +138,7 @@ export default function EpubReader({
           live.current.onPosition(cfi, progress);
         },
         onWheel,
+        onPointer: (clientX) => live.current.onPointer(clientX),
       },
     );
 

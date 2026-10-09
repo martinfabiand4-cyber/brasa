@@ -28,6 +28,8 @@ export interface EpubHandlers {
   onPosition: (position: EpubPosition) => void;
   /** Wheel inside the book's frame, so Ctrl + wheel can zoom the text. */
   onWheel: (event: WheelEvent) => void;
+  /** Pointer movement inside the frame, in window coordinates. */
+  onPointer: (clientX: number) => void;
 }
 
 /** The parts of an epub.js spine section this module uses. The package's typings leave them out. */
@@ -123,6 +125,9 @@ export function createRendition(
       handlers.onTap(tapZoneFor(event.clientX, width));
     });
     doc.addEventListener("wheel", handlers.onWheel, { passive: false });
+    doc.addEventListener("mousemove", (event: MouseEvent) => {
+      handlers.onPointer(element.getBoundingClientRect().left + event.clientX);
+    });
     doc.addEventListener("keydown", (event: KeyboardEvent) => {
       if (event.key === "ArrowRight" || event.key === "PageDown" || event.key === " ") {
         handlers.onKey("next");

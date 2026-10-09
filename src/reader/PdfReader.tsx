@@ -5,6 +5,7 @@ import { recognizePdfPages } from "../engine/ocrEngine";
 import { pdfProgress } from "../lib/reading";
 import type { Flow, PageTurn } from "../lib/types";
 import { createWheelZoom } from "../lib/zoom";
+import { captureZoomAnchor, type ZoomAnchor } from "../lib/zoomAnchor";
 import PdfPaged from "./PdfPaged";
 import PdfScrolled from "./PdfScrolled";
 import { pdfTocFromOutline, type ReaderCallbacks, type ReaderHandle } from "./types";
@@ -42,17 +43,25 @@ export default function PdfReader({
   const [size, setSize] = useState({ width: 0, height: 0 });
   const { width, height } = size;
 
-  // Latest zoom callback and flow, read by the wheel listener, which is attached once.
+  // Latest zoom callback, flow and zoom, read by the wheel listener, which is attached once.
   const zoomStep = useRef(onZoomStep);
   const flowRef = useRef(flow);
+  const zoomRef = useRef(zoom);
   useEffect(() => {
     zoomStep.current = onZoomStep;
     flowRef.current = flow;
+    zoomRef.current = zoom;
   });
+  // The spot under the pointer, recorded when a zoom step starts and kept while the page resizes.
+  const pendingZoom = useRef<ZoomAnchor | null>(null);
   // Page by page the wheel zooms on its own; while the pages scroll it needs Ctrl.
   const [onWheel] = useState(() =>
     createWheelZoom(
-      (direction) => zoomStep.current(direction),
+      (direction, event) => {
+        const host = hostRef.current;
+        pendingZoom.current = host ? captureZoomAnchor(host, event.clientX, event.clientY, zoomRef.current) : null;
+        zoomStep.current(direction);
+      },
       () => flowRef.current === "scroll",
     ),
   );
@@ -144,6 +153,7 @@ export default function PdfReader({
             initialPage={initialPage}
             width={width}
             zoom={zoom}
+            zoomAnchor={pendingZoom}
             onPosition={(page, total) => onPosition(String(page), pdfProgress(page, total))}
             onTap={onTap}
           />
@@ -155,6 +165,7 @@ export default function PdfReader({
             width={width}
             height={height}
             zoom={zoom}
+            zoomAnchor={pendingZoom}
             pageTurn={pageTurn}
             onPosition={(page, total) => onPosition(String(page), pdfProgress(page, total))}
             onTap={onTap}
