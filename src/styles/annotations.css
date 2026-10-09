@@ -424,13 +424,13 @@
   width: min(560px, calc(100vw - 120px));
 }
 
-/* The preview stays at the top of the sheet while the controls below scroll past it. */
+/* The preview stays at the top of the sheet while the controls below scroll past it. It has no
+   background of its own, so the sheet shows around the paper with no colored frame. */
 .design-preview {
   position: sticky;
   top: 0;
   z-index: 1;
-  padding: 2px 0 8px;
-  background: var(--surface-raised);
+  background: transparent;
 }
 
 .tool-sheet__header {
@@ -603,7 +603,6 @@
   height: 280px;
   overflow: hidden;
   container-type: inline-size;
-  border: 1px solid var(--glass-edge);
   border-radius: 12px;
   background: #f7f4ee;
   pointer-events: none;
@@ -640,6 +639,12 @@
 
 .ann-preview .ann-item {
   pointer-events: none;
+}
+
+/* The preview shows the anchor dot even though the bubble is open, so the offset reads clearly. */
+.ann-preview .ann-item.is-open .ann-dot {
+  transform: none;
+  opacity: 1;
 }
 
 .saved-list {

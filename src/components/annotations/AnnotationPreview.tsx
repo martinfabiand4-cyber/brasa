@@ -1,7 +1,7 @@
 import type { CSSProperties } from "react";
 import { DEFAULT_NOTE_SIZE, type AnnotationDesign, type AnnotationKind, type Typography } from "../../lib/annotations";
 import { useI18n } from "../../i18n/context";
-import { annotationStyle } from "./annotationStyle";
+import { annotationStyle, BUBBLE_OFFSET } from "./annotationStyle";
 
 interface AnnotationPreviewProps {
   kind: AnnotationKind;
@@ -34,7 +34,12 @@ export default function AnnotationPreview({ kind, design, color, typography }: A
     <div className="ann-preview" role="img" aria-label={t("sectionPreview")}>
       <div className="ann-preview__stage">
         <div className={`ann-preview__item ann-item ann-item--${kind} is-open`} style={look}>
-          <div className={`ann-body ann-body--${design}${isNote ? " ann-body--free" : ""}`}>
+          {/* A comment keeps its anchor dot in the preview, so the bubble shows where it sits against it. */}
+          {isNote ? null : <span className="ann-dot" />}
+          <div
+            className={`ann-body ann-body--${design}${isNote ? " ann-body--free" : ""}`}
+            style={isNote ? undefined : { marginLeft: BUBBLE_OFFSET.x, marginTop: BUBBLE_OFFSET.y }}
+          >
             <div className="ann-bar" />
             <div className="ann-text">{sample}</div>
           </div>

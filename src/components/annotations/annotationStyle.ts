@@ -9,6 +9,12 @@ export const FONT_STACKS: Record<FontFamily, string> = {
   hand: "'Segoe Print', 'Bradley Hand', 'Comic Sans MS', cursive",
 };
 
+/**
+ * Where an open comment's bubble sits against its anchor dot, in CSS pixels: to the right of the dot
+ * and a little higher than before, so the bubble sits clear of the text it points at.
+ */
+export const BUBBLE_OFFSET = { x: 14, y: 2 } as const;
+
 interface PlacedStyle {
   x: number;
   y: number;

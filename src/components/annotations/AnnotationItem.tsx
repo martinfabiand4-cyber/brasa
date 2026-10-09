@@ -12,13 +12,10 @@ import { useI18n } from "../../i18n/context";
 import { DEFAULT_NOTE_SIZE, SIZE_LIMITS } from "../../lib/annotations";
 import type { ShownAnnotation } from "../../state/useAnnotations";
 import { useAnnotationScene } from "./AnnotationContext";
-import { annotationStyle, cleanEditedText } from "./annotationStyle";
+import { annotationStyle, BUBBLE_OFFSET, cleanEditedText } from "./annotationStyle";
 
 /** Pointer movement, in pixels, before a press counts as a drag rather than a click. */
 const DRAG_SLOP = 4;
-
-/** Distance, in pixels, from the dot to the top-left corner of the open comment. */
-const BODY_OFFSET = 8;
 
 type Corner = "nw" | "ne" | "sw" | "se";
 const CORNERS: readonly Corner[] = ["nw", "ne", "sw", "se"];
@@ -59,7 +56,7 @@ export default function AnnotationItem({ item }: AnnotationItemProps) {
     if (!body || !layer || isNote) return;
     const fit = () => {
       const pageHeight = layer.clientHeight;
-      const top = item.y * pageHeight + BODY_OFFSET;
+      const top = item.y * pageHeight + BUBBLE_OFFSET.y;
       const overflow = top + body.offsetHeight - pageHeight;
       setLift(Math.max(0, Math.min(overflow, top)));
     };
@@ -218,7 +215,7 @@ export default function AnnotationItem({ item }: AnnotationItemProps) {
       <div
         ref={bodyRef}
         className={`ann-body ann-body--${item.design}${isNote ? " ann-body--free" : ""}`}
-        style={isNote ? undefined : { top: BODY_OFFSET - lift }}
+        style={isNote ? undefined : { left: BUBBLE_OFFSET.x, top: BUBBLE_OFFSET.y - lift }}
         aria-hidden={!isOpen}
       >
         <div className="ann-bar" onPointerDown={(event) => beginDrag(event)} title={t("annotationMove")}>
