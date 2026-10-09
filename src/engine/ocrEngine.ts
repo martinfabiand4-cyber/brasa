@@ -1,6 +1,7 @@
 import { createWorker } from "tesseract.js";
 import type { PDFDocumentProxy } from "pdfjs-dist";
 import { tidyOcrText } from "../lib/textAnalysis";
+import { binarizeRaster } from "./ocrImage";
 
 /**
  * Reads the text of pages that are only images. Recognition runs inside the app
@@ -33,7 +34,10 @@ function workerOptions() {
   };
 }
 
-/** Draws one page on a white canvas, which is what the recognizer expects. */
+/**
+ * Draws one page on a white canvas, which is what the recognizer expects, then makes it
+ * black and white against its own neighbourhood so that uneven scans read cleanly.
+ */
 async function drawPage(doc: PDFDocumentProxy, pageNumber: number): Promise<HTMLCanvasElement> {
   const page = await doc.getPage(pageNumber);
   try {
@@ -47,6 +51,9 @@ async function drawPage(doc: PDFDocumentProxy, pageNumber: number): Promise<HTML
     context.fillStyle = "#ffffff";
     context.fillRect(0, 0, canvas.width, canvas.height);
     await page.render({ canvas, canvasContext: context, viewport }).promise;
+    const pixels = context.getImageData(0, 0, canvas.width, canvas.height);
+    binarizeRaster(pixels);
+    context.putImageData(pixels, 0, 0);
     return canvas;
   } finally {
     page.cleanup();
