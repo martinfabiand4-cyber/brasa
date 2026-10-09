@@ -268,7 +268,9 @@
 /* The text itself. It grows sideways until it reaches the edge of the page, then downward. */
 .ann-text {
   min-width: 1ch;
-  padding: calc(var(--ann-margin) * var(--page-w) / 600);
+  /* The margin sets the gap, but never less than about a third of the text size, so text
+     at a zero margin does not run into the edge of its box. */
+  padding: max(calc(var(--ann-margin) * var(--page-w) / 600), 0.3em);
   font-family: var(--ann-font);
   line-height: var(--ann-lh);
   color: var(--ann-ink);
@@ -419,7 +421,7 @@
 
 /* The designer is wider than the other sheets, so its preview can show a design at a readable size. */
 .design-sheet {
-  width: 440px;
+  width: min(560px, calc(100vw - 120px));
 }
 
 /* The preview stays at the top of the sheet while the controls below scroll past it. */
@@ -592,25 +594,48 @@
   color: var(--text-primary);
 }
 
-/* The live preview fills the sheet and draws at a page 600 px wide: text reads at its true size, and the
-   sheet shows the whole design. It is a view only; the size saved with a design does not change. */
+/* The live preview fills the sheet. The box is a container, and the page is drawn as wide as the box, so the
+   whole design fits and its text, margin, line spacing and bubble grow together. It is a view only; the size
+   saved with a design does not change. */
 .ann-preview {
   position: relative;
   width: 100%;
   height: 280px;
   overflow: hidden;
+  container-type: inline-size;
   border: 1px solid var(--glass-edge);
   border-radius: 12px;
   background: #f7f4ee;
   pointer-events: none;
 }
 
+/* The design sits in the middle of the box, both ways. */
 .ann-preview__stage {
+  --page-w: 100cqw;
   position: absolute;
-  left: 0;
-  top: 0;
-  width: 600px;
-  height: 100%;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  box-sizing: border-box;
+}
+
+/* In the preview the item is part of the centered flow, so its size is the design's own size. */
+.ann-preview__item {
+  position: relative;
+  left: auto;
+  top: auto;
+  width: auto;
+  max-width: 100%;
+  height: auto;
+}
+
+.ann-preview .ann-body {
+  position: relative;
+  left: auto;
+  top: auto;
+  max-width: 100%;
 }
 
 .ann-preview .ann-item {
