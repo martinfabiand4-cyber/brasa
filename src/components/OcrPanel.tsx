@@ -17,6 +17,12 @@ interface OcrPanelProps {
   onClose: () => void;
 }
 
+/** The reason a run failed, in words that can be reported. */
+function describeFailure(error: unknown): string {
+  if (error instanceof Error) return error.message || error.name;
+  return String(error);
+}
+
 /** The text of each page: the text layer, or the recognized text where the layer is empty. */
 function mergeText(pages: readonly PageText[], recognized: Record<string, string>): PageText[] {
   return pages.map(({ page, text }) => ({
@@ -45,6 +51,7 @@ export default function OcrPanel({
   const [progress, setProgress] = useState(0);
   const [textless, setTextless] = useState<number[]>(analysis.textless);
   const [added, setAdded] = useState<number | null>(null);
+  const [failure, setFailure] = useState<string | null>(null);
   const run = useRef<AbortController | null>(null);
   const pagesRef = useRef<PageText[]>([]);
   const analysisRef = useRef(analysis);
@@ -56,6 +63,7 @@ export default function OcrPanel({
   const scan = useCallback(async () => {
     const handle = reader.current;
     if (!handle?.scanText) {
+      setFailure(null);
       setPhase("error");
       return;
     }
@@ -65,6 +73,7 @@ export default function OcrPanel({
     setPhase("scanning");
     setProgress(0);
     setAdded(null);
+    setFailure(null);
     try {
       const pages = await handle.scanText({ signal: controller.signal, onProgress: setProgress });
       if (controller.signal.aborted) return;
@@ -78,8 +87,10 @@ export default function OcrPanel({
         headings: detectHeadings(mergeText(pages, current.pages)),
       }));
       setPhase("ready");
-    } catch {
-      if (!controller.signal.aborted) setPhase("error");
+    } catch (error) {
+      if (controller.signal.aborted) return;
+      setFailure(describeFailure(error));
+      setPhase("error");
     }
   }, [reader, onAnalysis]);
 
@@ -98,6 +109,7 @@ export default function OcrPanel({
     run.current = controller;
     setPhase("reading");
     setProgress(0);
+    setFailure(null);
     try {
       await handle.recognize(pending, {
         signal: controller.signal,
@@ -109,8 +121,13 @@ export default function OcrPanel({
       // Stopping early still keeps what was read, so the index covers those pages too.
       onAnalysis((current) => ({ ...current, headings: detectHeadings(mergeText(pagesRef.current, current.pages)) }));
       setPhase("ready");
-    } catch {
-      setPhase(controller.signal.aborted ? "ready" : "error");
+    } catch (error) {
+      if (controller.signal.aborted) {
+        setPhase("ready");
+        return;
+      }
+      setFailure(describeFailure(error));
+      setPhase("error");
     }
   }
 
@@ -169,6 +186,15 @@ export default function OcrPanel({
           <button type="button" className="glass-button ocr-sheet__action" onClick={stop}>
             {t("ocrStop")}
           </button>
+        ) : null}
+
+        {phase === "error" ? (
+          <>
+            {failure ? <p className="tool-sheet__hint">{t("ocrDetail", { detail: failure })}</p> : null}
+            <button type="button" className="glass-button glass-button--primary ocr-sheet__action" onClick={() => void scan()}>
+              {t("ocrRetry")}
+            </button>
+          </>
         ) : null}
 
         {phase === "ready" && analysis.headings.length > 0 ? (
