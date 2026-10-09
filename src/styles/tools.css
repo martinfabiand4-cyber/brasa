@@ -486,3 +486,18 @@
   background: rgb(0 0 0 / 0.55);
   color: #fff;
 }
+
+/* A soft accent fade at the foot of every cover, so image covers belong to the same set as the generated ones */
+.book-card__cover--image::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(to top, hsl(var(--cover-hue-end) 66% 16% / 0.4), transparent 34%);
+  pointer-events: none;
+}
+
+.book-card__cover--image .book-card__format,
+.book-card__cover--image .book-card__star {
+  z-index: 1;
+}

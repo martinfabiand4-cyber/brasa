@@ -39,7 +39,7 @@ describe("createWheelZoom", () => {
     const handle = createWheelZoom(onStep);
     handle(wheel(-120, false));
     handle(wheel(120, false));
-    expect(onStep.mock.calls).toEqual([[1], [-1]]);
+    expect(onStep.mock.calls.map(([direction]) => direction)).toEqual([1, -1]);
   });
 
   it("zooms only with Ctrl while the page scrolls, so the wheel can still scroll", () => {
@@ -51,7 +51,7 @@ describe("createWheelZoom", () => {
     expect(plain.preventDefault).not.toHaveBeenCalled();
 
     handle(wheel(-120, true));
-    expect(onStep).toHaveBeenCalledWith(1);
+    expect(onStep).toHaveBeenCalledWith(1, expect.anything());
   });
 
   it("reads the scrolling mode at each event, so switching flow takes effect at once", () => {
@@ -61,7 +61,7 @@ describe("createWheelZoom", () => {
     handle(wheel(-120, false));
     scrolling = true;
     handle(wheel(-120, false));
-    expect(onStep.mock.calls).toEqual([[1]]);
+    expect(onStep.mock.calls.map(([direction]) => direction)).toEqual([1]);
   });
 
   it("waits for enough movement, so trackpads do not zoom on every tiny event", () => {
@@ -70,7 +70,7 @@ describe("createWheelZoom", () => {
     for (let i = 0; i < 5; i++) handle(wheel(-4, false));
     expect(onStep).not.toHaveBeenCalled();
     handle(wheel(-40, false));
-    expect(onStep).toHaveBeenCalledWith(1);
+    expect(onStep).toHaveBeenCalledWith(1, expect.anything());
   });
 
   it("stops the browser from zooming or scrolling the page while it zooms", () => {

@@ -118,19 +118,29 @@
 }
 
 /* PDF, one page at a time */
+/* Flex-start, not center: a page zoomed past the window must still be reachable from its left edge. */
 .pdf-stage {
   position: absolute;
   inset: 0;
   display: flex;
-  justify-content: center;
+  justify-content: flex-start;
   align-items: flex-start;
   padding: var(--space-6) 48px;
   overflow: auto;
   cursor: default;
 }
 
+.pdf-stage--pannable {
+  cursor: grab;
+}
+
+.pdf-stage--pannable:active {
+  cursor: grabbing;
+}
+
+/* Auto margins center the page while it fits and fall back to the start edge when it does not. */
 .pdf-page {
-  margin: auto 0;
+  margin: auto;
   border-radius: 2px;
   background: #ffffff;
   box-shadow: var(--shadow-page);

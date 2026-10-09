@@ -70,6 +70,8 @@ export interface ReaderCallbacks {
   onError: () => void;
   /** Wheel over the page: +1 zooms in, -1 zooms out. */
   onZoomStep: (direction: ZoomDirection) => void;
+  /** Pointer over the book, as a distance from the window's left edge in CSS pixels. */
+  onPointer: (clientX: number) => void;
 }
 
 export function pdfTocFromOutline(outline: OutlineEntry[]): TocItem[] {
