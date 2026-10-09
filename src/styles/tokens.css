@@ -18,11 +18,14 @@
   --noche-800: #241719;
   --noche-700: #332124;
 
+  /* The background of a book page. Paper uses cream; the dark theme keeps the page white. */
+  --page-paper: #ffffff;
+
   --tinta-100: #f4ecea;
   --tinta-300: #cdbbb8;
   --tinta-400: #a99599;
 
-  /* Paper uses cool neutrals: a warm, cream-tinted white tires the eyes. */
+  /* The cool neutrals are kept for the dark theme's light surfaces; paper uses the cream values below. */
   --frio-50: #f3f4f6;
   --frio-100: #e7e9ed;
   --frio-200: #d8dce2;
@@ -81,17 +84,18 @@
   --glass-shine: rgb(255 255 255 / 0.16);
 }
 
-/* 2. Semantic: paper */
+/* 2. Semantic: paper. Warm creams instead of white, so long reading does not glare. */
 :root[data-theme="papel"] {
   color-scheme: light;
 
-  --surface-app: var(--frio-100);
-  --surface-raised: var(--frio-50);
-  --surface-sunk: var(--frio-200);
-  --surface-hover: var(--frio-200);
+  --surface-app: #e9e0c9;
+  --surface-raised: #f8f2e2;
+  --surface-sunk: #ece3cc;
+  --surface-hover: #ece3cc;
+  --page-paper: #faf4e3;
 
-  --text-primary: var(--frio-900);
-  --text-secondary: var(--frio-600);
+  --text-primary: #2a2418;
+  --text-secondary: #6b5f4a;
   --text-on-accent: #ffffff;
 
   --accent: var(--brasa-600);
@@ -99,16 +103,16 @@
   --accent-text: var(--brasa-600);
   --accent-soft: rgb(192 16 42 / 0.1);
 
-  --border: rgb(28 31 36 / 0.1);
-  --border-strong: rgb(28 31 36 / 0.2);
+  --border: rgb(70 52 24 / 0.12);
+  --border-strong: rgb(70 52 24 / 0.22);
   --focus-ring: var(--brasa-600);
-  --scrim: rgb(28 31 36 / 0.42);
-  --shadow-page: 0 14px 36px rgb(28 31 36 / 0.2);
-  --shadow-sheet: 0 24px 64px rgb(28 31 36 / 0.22);
+  --scrim: rgb(60 44 20 / 0.42);
+  --shadow-page: 0 14px 36px rgb(60 44 20 / 0.22);
+  --shadow-sheet: 0 24px 64px rgb(60 44 20 / 0.24);
 
-  --reading-bg: #f2f4f7;
+  --reading-bg: #e9e0c9;
 
-  --glass-fill: rgb(243 244 246 / 0.72);
-  --glass-edge: rgb(28 31 36 / 0.12);
-  --glass-shine: rgb(255 255 255 / 0.9);
+  --glass-fill: rgb(248 242 226 / 0.72);
+  --glass-edge: rgb(70 52 24 / 0.14);
+  --glass-shine: rgb(255 255 255 / 0.85);
 }

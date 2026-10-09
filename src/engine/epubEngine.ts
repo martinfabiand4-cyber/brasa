@@ -47,7 +47,7 @@ const READING_THEMES: Record<Theme, Record<string, Record<string, string>>> = {
     a: { color: "#E8717F" },
   },
   papel: {
-    body: { background: "#F2F4F7", color: "#1C1F24" },
+    body: { background: "#FAF4E3", color: "#2A2418" },
     a: { color: "#B3122E" },
   },
 };

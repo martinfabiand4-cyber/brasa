@@ -13,10 +13,11 @@ describe("stepZoom", () => {
     expect(stepZoom(2.3, -1)).toBe(2.2);
   });
 
-  it("never zooms out past the whole page, so it always stays inside its margins", () => {
-    expect(ZOOM_MIN).toBe(1);
-    expect(stepZoom(1.1, -1)).toBe(1);
-    expect(stepZoom(1, -1)).toBe(1);
+  it("zooms out to 0.6 and no further, in tenths", () => {
+    expect(ZOOM_MIN).toBe(0.6);
+    expect(stepZoom(1, -1)).toBe(0.9);
+    expect(stepZoom(0.7, -1)).toBe(0.6);
+    expect(stepZoom(0.6, -1)).toBe(0.6);
   });
 
   it("never zooms in past the maximum", () => {

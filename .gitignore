@@ -9,3 +9,6 @@ Thumbs.db
 
 # Recognition runtime copied by scripts/copy-ocr.mjs
 public/ocr/
+
+# Local checkouts made by agent sessions, not project files
+.claude/worktrees/

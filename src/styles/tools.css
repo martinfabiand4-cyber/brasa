@@ -487,13 +487,19 @@
   color: #fff;
 }
 
-/* A soft accent fade at the foot of every cover, so image covers belong to the same set as the generated ones */
+/* The accent fades up from the foot of every image cover, the same red that the generated covers
+   use. It is strong enough to read as a wine-red tint over the lower third, as in the reference. */
 .book-card__cover--image::after {
   content: "";
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  background: linear-gradient(to top, hsl(var(--cover-hue-end) 66% 16% / 0.4), transparent 34%);
+  background: linear-gradient(
+    to top,
+    hsl(var(--cover-hue) 72% 30% / 0.78) 0%,
+    hsl(var(--cover-hue) 66% 36% / 0.5) 38%,
+    transparent 70%
+  );
   pointer-events: none;
 }
 

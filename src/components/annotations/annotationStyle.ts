@@ -14,14 +14,16 @@ interface PlacedStyle {
   y: number;
   color: string;
   typography: Typography;
+  /** Notes only: the box size, in reference units. */
+  size?: { width: number; height: number };
 }
 
 /**
  * The custom properties that size and color a note or comment. Sizes are in
  * reference units; the CSS turns them into pixels for the page's current width.
  */
-export function annotationStyle({ x, y, color, typography }: PlacedStyle): CSSProperties {
-  return {
+export function annotationStyle({ x, y, color, typography, size }: PlacedStyle): CSSProperties {
+  const style: Record<string, string> = {
     left: `${x * 100}%`,
     top: `${y * 100}%`,
     width: `${(1 - x) * 100}%`,
@@ -31,7 +33,12 @@ export function annotationStyle({ x, y, color, typography }: PlacedStyle): CSSPr
     "--ann-margin": String(typography.margin),
     "--ann-lh": String(typography.lineHeight),
     "--ann-font": FONT_STACKS[typography.font],
-  } as CSSProperties;
+  };
+  if (size) {
+    style["--ann-w"] = String(size.width);
+    style["--ann-h"] = String(size.height);
+  }
+  return style as CSSProperties;
 }
 
 /** Removes one trailing line break, which browsers add after typing at the end of a box. */

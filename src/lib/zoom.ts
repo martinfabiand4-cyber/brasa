@@ -1,9 +1,9 @@
 /**
  * Limits and steps for the two zoom controls: PDF zoom and EPUB text size.
- * PDF zoom starts at 1, which is the whole page fitted inside its margins, so
- * zooming out can never push the page past them.
+ * PDF zoom is 1 for the whole page fitted inside its margins. It can go out to
+ * 0.6 to see a page smaller than that, in both page and scroll reading.
  */
-export const ZOOM_MIN = 1;
+export const ZOOM_MIN = 0.6;
 export const ZOOM_MAX = 3;
 export const ZOOM_STEP = 0.1;
 export const FONT_MIN = 70;
