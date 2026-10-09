@@ -1,4 +1,4 @@
-import { ScanSmiley, X } from "@phosphor-icons/react";
+import { ArrowClockwise, ScanSmiley, X } from "@phosphor-icons/react";
 import { useCallback, useEffect, useId, useRef, useState, type RefObject } from "react";
 import { useI18n } from "../i18n/context";
 import type { ReaderHandle } from "../reader/types";
@@ -99,11 +99,13 @@ export default function OcrPanel({
     return () => run.current?.abort();
   }, [scan]);
 
+  /** Pages that have no text read yet. */
   const pending = textless.filter((page) => !(String(page) in analysis.pages));
 
-  async function readImages() {
+  /** Reads the given pages. Text read before stays until a page is read again. */
+  async function readPages(list: readonly number[]) {
     const handle = reader.current;
-    if (!handle?.recognize || pending.length === 0) return;
+    if (!handle?.recognize || list.length === 0) return;
     run.current?.abort();
     const controller = new AbortController();
     run.current = controller;
@@ -111,7 +113,7 @@ export default function OcrPanel({
     setProgress(0);
     setFailure(null);
     try {
-      await handle.recognize(pending, {
+      await handle.recognize(list, {
         signal: controller.signal,
         onPage: (page, text) => {
           onAnalysis((current) => ({ ...current, pages: { ...current.pages, [String(page)]: text } }));
@@ -176,10 +178,25 @@ export default function OcrPanel({
         <p className="tool-sheet__hint">{t("ocrLanguages")}</p>
 
         {phase === "ready" && pending.length > 0 ? (
-          <button type="button" className="glass-button glass-button--primary ocr-sheet__action" onClick={() => void readImages()}>
+          <button type="button" className="glass-button glass-button--primary ocr-sheet__action" onClick={() => void readPages(pending)}>
             <ScanSmiley size={16} aria-hidden="true" />
             {t("ocrStart", { count: pending.length })}
           </button>
+        ) : null}
+
+        {/* Books read before the reader improved keep their old text, so every image page can be read again. */}
+        {phase === "ready" && textless.length > 0 && pending.length < textless.length ? (
+          <>
+            <button
+              type="button"
+              className={`glass-button ocr-sheet__action${pending.length === 0 ? " glass-button--primary" : ""}`}
+              onClick={() => void readPages(textless)}
+            >
+              <ArrowClockwise size={16} aria-hidden="true" />
+              {t("ocrReadAgain", { count: textless.length })}
+            </button>
+            <p className="tool-sheet__hint">{t("ocrReadAgainHint")}</p>
+          </>
         ) : null}
 
         {phase === "reading" ? (

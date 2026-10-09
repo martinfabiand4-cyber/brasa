@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 import { createId } from "../lib/format";
 import {
+  DEFAULT_NOTE_SIZE,
   normalizeAnnotationFile,
   type Annotation,
   type AnnotationFile,
@@ -22,6 +23,9 @@ export interface NewAnnotation {
   anchor: string;
   x: number;
   y: number;
+  /** Notes only. A note placed without a size takes the default one. */
+  width?: number;
+  height?: number;
 }
 
 export interface NewStroke {
@@ -43,6 +47,9 @@ export function useAnnotations(bookId: string) {
   const { value, update } = useSidecar<AnnotationFile>(`${NOTES_DIR}/${bookId}.json`, normalizeAnnotationFile);
   const [openId, setOpenId] = useState<string | null>(null);
   const openRef = useRef<string | null>(null);
+  // The saved notes and comments as of the last render, for checks made from event handlers.
+  const savedRef = useRef<Annotation[]>([]);
+  savedRef.current = value?.annotations ?? [];
 
   const annotations = useMemo<ShownAnnotation[]>(
     () => (value?.annotations ?? []).map((item) => ({ ...item, open: item.id === openId })),
@@ -62,12 +69,21 @@ export function useAnnotations(bookId: string) {
     setOpenId(null);
   }, []);
 
-  const hasOpen = useCallback(() => openRef.current !== null, []);
+  // Only an open comment bubble counts. Notes are always shown, so one being typed in never blocks a page turn.
+  const hasOpen = useCallback(() => {
+    const id = openRef.current;
+    if (id === null) return false;
+    return savedRef.current.some((item) => item.id === id && item.kind === "comment");
+  }, []);
 
   const add = useCallback(
     (input: NewAnnotation): string => {
       const id = createId();
       const item: Annotation = { ...input, id, text: "", createdAt: Date.now() };
+      if (input.kind === "note") {
+        item.width = input.width ?? DEFAULT_NOTE_SIZE.width;
+        item.height = input.height ?? DEFAULT_NOTE_SIZE.height;
+      }
       update((file) => ({ ...file, annotations: [...file.annotations, item] }));
       setOpen(id, true);
       return id;
@@ -80,6 +96,17 @@ export function useAnnotations(bookId: string) {
       update((file) => ({
         ...file,
         annotations: file.annotations.map((item) => (item.id === id ? { ...item, x, y } : item)),
+      }));
+    },
+    [update],
+  );
+
+  /** Moves and resizes a note together, for a drag on one of its corners. */
+  const reshape = useCallback(
+    (id: string, box: { x: number; y: number; width: number; height: number }) => {
+      update((file) => ({
+        ...file,
+        annotations: file.annotations.map((item) => (item.id === id ? { ...item, ...box } : item)),
       }));
     },
     [update],
@@ -132,6 +159,7 @@ export function useAnnotations(bookId: string) {
     collapseAll,
     add,
     move,
+    reshape,
     edit,
     remove,
     addStroke,

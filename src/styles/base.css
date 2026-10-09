@@ -171,7 +171,9 @@ p {
   color: var(--text-secondary);
   font-size: 13px;
   white-space: nowrap;
-  transition: background var(--duration-fast) ease, color var(--duration-fast) ease;
+  /* The selected background switches at once. Fading it made the old and new choices cross-fade
+     on every quick click, which read as a blink. Only the label eases. */
+  transition: color var(--duration-fast) ease;
 }
 
 .segmented button:hover {

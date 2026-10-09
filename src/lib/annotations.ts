@@ -42,7 +42,18 @@ export const TEXT_COLORS: readonly string[] = ["#1c1f24", "#ffffff", "#b3122e", 
 /** Colors for the marker. */
 export const INK_COLORS: readonly string[] = ["#ffe030", "#ff6b9a", "#4fd1a5", "#4da3ff", "#ff9f45", "#b57bff", "#1c1f24"];
 
-export const SIZE_LIMITS = { size: [12, 36], margin: [0, 24], lineHeight: [1, 2.4], ink: [1, 40] } as const;
+export const SIZE_LIMITS = {
+  size: [6, 36],
+  margin: [0, 24],
+  lineHeight: [1, 2.4],
+  ink: [1, 40],
+  /** Notes are free rectangles: their width and height are chosen by the person, within these limits. */
+  noteWidth: [80, 720],
+  noteHeight: [48, 900],
+} as const;
+
+/** The size a note has when it is first placed, in reference units. It can be resized on the page. */
+export const DEFAULT_NOTE_SIZE = { width: 220, height: 160 } as const;
 
 export interface Typography {
   font: FontFamily;
@@ -73,9 +84,12 @@ export interface Annotation {
   typography: Typography;
   /** The page it sits on: a page number for PDF, the page's start CFI for EPUB. */
   anchor: string;
-  /** Position of the dot, from 0 to 1 of the page's width and height. */
+  /** Position from 0 to 1 of the page's width and height: the dot for a comment, the top-left corner for a note. */
   x: number;
   y: number;
+  /** Notes only: the size of the box, in reference units. */
+  width?: number;
+  height?: number;
   text: string;
   createdAt: number;
 }
@@ -167,7 +181,7 @@ export function normalizeAnnotation(raw: unknown): Annotation | null {
   const input = raw as Partial<Record<keyof Annotation, unknown>>;
   if (input.kind !== "note" && input.kind !== "comment") return null;
   if (typeof input.anchor !== "string" || input.anchor === "") return null;
-  return {
+  const annotation: Annotation = {
     id: typeof input.id === "string" && input.id ? input.id : createId(),
     kind: input.kind,
     design: designFor(input.kind, input.design),
@@ -179,6 +193,11 @@ export function normalizeAnnotation(raw: unknown): Annotation | null {
     text: typeof input.text === "string" ? input.text : "",
     createdAt: typeof input.createdAt === "number" ? input.createdAt : 0,
   };
+  if (annotation.kind === "note") {
+    annotation.width = within(input.width, SIZE_LIMITS.noteWidth, DEFAULT_NOTE_SIZE.width);
+    annotation.height = within(input.height, SIZE_LIMITS.noteHeight, DEFAULT_NOTE_SIZE.height);
+  }
+  return annotation;
 }
 
 export function normalizeStroke(raw: unknown): Stroke | null {

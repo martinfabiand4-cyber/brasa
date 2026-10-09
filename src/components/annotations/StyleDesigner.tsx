@@ -84,6 +84,12 @@ export default function StyleDesigner({ kind, saved, onSave, onRemove, onClose }
       </header>
 
       <div className="tool-sheet__body">
+        {/* The preview leads and stays in view while the controls below are changed. */}
+        <section className="tool-sheet__section design-preview" aria-label={t("sectionPreview")}>
+          <h3>{t("sectionPreview")}</h3>
+          <AnnotationPreview kind={kind} design={design} color={color} typography={typography} />
+        </section>
+
         <section className="tool-sheet__section" aria-label={t("sectionDesign")}>
           <h3>{t("sectionDesign")}</h3>
           <div className="design-cards" role="radiogroup" aria-label={t("sectionDesign")}>
@@ -158,11 +164,6 @@ export default function StyleDesigner({ kind, saved, onSave, onRemove, onClose }
               </label>
             );
           })}
-        </section>
-
-        <section className="tool-sheet__section" aria-label={t("sectionPreview")}>
-          <h3>{t("sectionPreview")}</h3>
-          <AnnotationPreview kind={kind} design={design} color={color} typography={typography} />
         </section>
 
         {savedOfKind.length > 0 ? (

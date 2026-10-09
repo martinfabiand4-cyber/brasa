@@ -102,15 +102,17 @@
   pointer-events: none;
 }
 
-/* The open state: the note or bubble grows out of the dot. */
+/* The open state: the comment's bubble grows out of its dot. Its size follows the text size, so a
+   smaller text makes a smaller box. The font size is set here, and the text inherits it. */
 .ann-body {
   position: absolute;
   left: 8px;
   top: 8px;
   box-sizing: border-box;
   width: fit-content;
-  min-width: calc(var(--page-w) * 0.2);
+  min-width: 8em;
   max-width: calc(100% - 16px);
+  font-size: calc(var(--ann-size) * var(--page-w) / 600);
   background: var(--ann-bg);
   color: var(--ann-ink);
   transform-origin: 0 0;
@@ -129,13 +131,109 @@
   transition: transform 340ms var(--ease-out), opacity 200ms ease, visibility 0s;
 }
 
-/* A note rolls up like paper when it closes, instead of shrinking into its dot. */
-.ann-item--note .ann-body {
-  transform: scale(0.2, 0.03);
+/* A note is a box of the size its person chose. It has no dot and never folds away: it stays as
+   placed, and only its corners change its size. */
+.ann-body--free {
+  left: 0;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  width: calc(var(--ann-w) * var(--page-w) / 600);
+  height: calc(var(--ann-h) * var(--page-w) / 600);
+  min-width: 0;
+  max-width: none;
+  overflow: hidden;
 }
 
-.ann-item--note.is-open .ann-body {
-  transform: none;
+/* Text keeps the box's size; a longer text scrolls inside it. */
+.ann-body--free .ann-text {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+/* The bar keeps its button clear of the two top corners, which resize the note. */
+.ann-body--free .ann-bar {
+  padding: 0 14px;
+}
+
+/* The four corners resize a note. They sit inside the box, so the box never clips them. */
+.ann-corner {
+  position: absolute;
+  z-index: 2;
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  touch-action: none;
+}
+
+.ann-corner::after {
+  content: "";
+  position: absolute;
+  width: 7px;
+  height: 7px;
+  border: 0 solid rgb(0 0 0 / 0.3);
+  transition: border-color var(--duration-fast) var(--ease-out);
+}
+
+.ann-corner:hover::after,
+.ann-corner:focus-visible::after {
+  border-color: rgb(0 0 0 / 0.6);
+}
+
+.ann-corner--nw {
+  left: 0;
+  top: 0;
+  cursor: nwse-resize;
+}
+
+.ann-corner--ne {
+  right: 0;
+  top: 0;
+  cursor: nesw-resize;
+}
+
+.ann-corner--sw {
+  left: 0;
+  bottom: 0;
+  cursor: nesw-resize;
+}
+
+.ann-corner--se {
+  right: 0;
+  bottom: 0;
+  cursor: nwse-resize;
+}
+
+.ann-corner--nw::after {
+  left: 3px;
+  top: 3px;
+  border-left-width: 2px;
+  border-top-width: 2px;
+}
+
+.ann-corner--ne::after {
+  right: 3px;
+  top: 3px;
+  border-right-width: 2px;
+  border-top-width: 2px;
+}
+
+.ann-corner--sw::after {
+  left: 3px;
+  bottom: 3px;
+  border-left-width: 2px;
+  border-bottom-width: 2px;
+}
+
+.ann-corner--se::after {
+  right: 3px;
+  bottom: 3px;
+  border-right-width: 2px;
+  border-bottom-width: 2px;
 }
 
 .ann-bar {
@@ -172,7 +270,6 @@
   min-width: 1ch;
   padding: calc(var(--ann-margin) * var(--page-w) / 600);
   font-family: var(--ann-font);
-  font-size: calc(var(--ann-size) * var(--page-w) / 600);
   line-height: var(--ann-lh);
   color: var(--ann-ink);
   white-space: pre-wrap;
@@ -318,6 +415,20 @@
   overflow: hidden;
   border-radius: 20px;
   animation: rise var(--duration-base) var(--ease-out) both;
+}
+
+/* The designer is wider than the other sheets, so its preview can show a design at a readable size. */
+.design-sheet {
+  width: 440px;
+}
+
+/* The preview stays at the top of the sheet while the controls below scroll past it. */
+.design-preview {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 2px 0 8px;
+  background: var(--surface-raised);
 }
 
 .tool-sheet__header {
@@ -481,11 +592,12 @@
   color: var(--text-primary);
 }
 
-/* The live preview: the page-sized stage is drawn at a fixed scale to fit the sheet. */
+/* The live preview fills the sheet and draws at a page 600 px wide: text reads at its true size, and the
+   sheet shows the whole design. It is a view only; the size saved with a design does not change. */
 .ann-preview {
   position: relative;
-  width: 336px;
-  height: 258px;
+  width: 100%;
+  height: 280px;
   overflow: hidden;
   border: 1px solid var(--glass-edge);
   border-radius: 12px;
@@ -498,9 +610,7 @@
   left: 0;
   top: 0;
   width: 600px;
-  height: 460px;
-  transform: scale(0.56);
-  transform-origin: 0 0;
+  height: 100%;
 }
 
 .ann-preview .ann-item {

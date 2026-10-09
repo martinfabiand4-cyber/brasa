@@ -142,13 +142,16 @@
 .pdf-page {
   margin: auto;
   border-radius: 2px;
-  background: #ffffff;
+  background: var(--page-paper);
   box-shadow: var(--shadow-page);
   line-height: 0;
 }
 
+/* Multiplying the page onto its background turns a white page into the paper color. Colors in
+   the page are darkened a little, which is what ink on paper does. Dark themes keep white, so nothing changes. */
 .pdf-page__canvas {
   display: block;
+  mix-blend-mode: multiply;
 }
 
 /* PDF, continuous scrolling */
@@ -162,7 +165,7 @@
 .pdf-scroll__page {
   margin: 0 auto var(--space-6);
   border-radius: 2px;
-  background: #ffffff;
+  background: var(--page-paper);
   box-shadow: var(--shadow-page);
   line-height: 0;
 }
