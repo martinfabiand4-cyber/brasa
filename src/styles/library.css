@@ -59,7 +59,8 @@
   border-radius: 4px var(--radius) var(--radius) 4px;
   background:
     linear-gradient(90deg, rgb(0 0 0 / 0.35) 0 4px, transparent 4px),
-    linear-gradient(165deg, hsl(var(--cover-hue) 58% 32%) 0%, hsl(var(--cover-hue) 72% 14%) 100%);
+    radial-gradient(120% 60% at 18% 0%, hsl(var(--cover-hue) 85% 58% / 0.42), transparent 62%),
+    linear-gradient(170deg, hsl(var(--cover-hue) 66% 40%) 0%, hsl(var(--cover-hue-end) 64% 20%) 58%, hsl(var(--cover-hue-end) 58% 9%) 100%);
   box-shadow: var(--shadow-page);
   text-align: left;
   color: #fbf3f1;

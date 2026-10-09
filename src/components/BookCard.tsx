@@ -13,19 +13,23 @@ interface BookCardProps {
 }
 
 /**
- * A book's own cover when it has one. Otherwise a generated cover in the crimson
- * family, drawn from the title so every book keeps a stable, recognizable face.
+ * Generated covers stay in the accent's red family, from rose-crimson through red to coral. The
+ * title's hash picks where a book sits in that 40-degree range, so every book keeps its own tone.
+ * The end of the gradient is pulled toward wine, which keeps the set consistent.
  */
-function coverHue(hue: number): number {
-  return 348 + (hue % 36);
+function coverTone(hue: number): { start: number; end: number } {
+  const start = (340 + (hue % 40)) % 360;
+  return { start, end: (start + 346) % 360 };
 }
 
 export default function BookCard({ book, onOpen, onToggleFavorite, onRemove }: BookCardProps) {
   const { t } = useI18n();
   const percent = percentOf(book.progress);
   const image = useCover(book.coverPath);
+  const tone = coverTone(book.hue);
   const coverStyle = {
-    "--cover-hue": coverHue(book.hue),
+    "--cover-hue": tone.start,
+    "--cover-hue-end": tone.end,
   } as CSSProperties;
 
   return (
