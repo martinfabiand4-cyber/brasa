@@ -20,6 +20,11 @@ interface ReaderDrawerProps {
   /** A second line with the place in the book, or null when there is none to show. */
   bookmarkDetail: (bookmark: Bookmark) => string | null;
   onClose: () => void;
+  /** Opened by the pointer at the edge: no dimming, and the owner closes it when the pointer leaves. */
+  peek?: boolean;
+  onPointerEnter?: () => void;
+  onPointerLeave?: () => void;
+  onPointerDown?: () => void;
 }
 
 export default function ReaderDrawer({
@@ -33,6 +38,10 @@ export default function ReaderDrawer({
   bookmarkTitle,
   bookmarkDetail,
   onClose,
+  peek = false,
+  onPointerEnter,
+  onPointerLeave,
+  onPointerDown,
 }: ReaderDrawerProps) {
   const { t } = useI18n();
   const titleId = useId();
@@ -52,8 +61,19 @@ export default function ReaderDrawer({
   }, [onClose]);
 
   return (
-    <div className="scrim scrim--side" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
-      <aside className={`drawer${ready ? " drawer--open" : ""}`} role="dialog" aria-modal="true" aria-labelledby={titleId}>
+    <div
+      className={`scrim scrim--side${peek ? " scrim--peek" : ""}`}
+      onMouseDown={(event) => event.target === event.currentTarget && onClose()}
+    >
+      <aside
+        className={`drawer${ready ? " drawer--open" : ""}`}
+        role="dialog"
+        aria-modal={!peek}
+        aria-labelledby={titleId}
+        onPointerEnter={onPointerEnter}
+        onPointerLeave={onPointerLeave}
+        onPointerDown={onPointerDown}
+      >
         <header className="drawer__header">
           <div className="segmented" role="tablist">
             <button type="button" role="tab" aria-selected={tab === "contents"} aria-pressed={tab === "contents"} onClick={() => onTabChange("contents")}>

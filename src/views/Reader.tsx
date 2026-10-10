@@ -47,6 +47,11 @@ interface ReaderProps {
 
 type Panel = "drawer" | "search" | "bookmark" | "brightness" | "settings" | "note" | "comment" | "marker" | "ocr" | null;
 
+/** How long the pointer rests on the right edge before the drawer opens. */
+const EDGE_OPEN_DELAY_MS = 150;
+/** How long the pointer may stay away from an edge-opened drawer before it closes. */
+const DRAWER_CLOSE_DELAY_MS = 350;
+
 interface SearchState {
   query: string;
   status: SearchStatus;
@@ -121,6 +126,12 @@ export default function Reader({ book, lib, onBack }: ReaderProps) {
   const [search, setSearch] = useState<SearchState>(EMPTY_SEARCH);
   const [ink, setInk] = useState<InkSettings>({ color: DEFAULT_INK.color, style: DEFAULT_INK.style, size: DEFAULT_INK.size });
   const [drag, setDrag] = useState<DragState | null>(null);
+  // A drawer opened from the right edge follows the pointer: it closes when the pointer leaves it,
+  // unless the person clicks in it or opened it from the tool dock.
+  const [drawerPeek, setDrawerPeek] = useState(false);
+  const peekRef = useRef(false);
+  const panelRef = useRef<Panel>(null);
+  const drawerTimer = useRef<number | null>(null);
 
   const { settings } = lib;
   const bookmarks = lib.state.data.bookmarks.filter((m) => m.bookId === book.id);
@@ -181,7 +192,55 @@ export default function Reader({ book, lib, onBack }: ReaderProps) {
   // A search still running when the reader closes must stop.
   useEffect(() => () => searchRun.current?.abort(), []);
 
-  const closePanel = useCallback(() => setPanel(null), []);
+  useEffect(() => {
+    panelRef.current = panel;
+  }, [panel]);
+
+  const clearDrawerTimer = useCallback(() => {
+    if (drawerTimer.current !== null) window.clearTimeout(drawerTimer.current);
+    drawerTimer.current = null;
+  }, []);
+  useEffect(() => clearDrawerTimer, [clearDrawerTimer]);
+
+  const setPeek = useCallback((value: boolean) => {
+    peekRef.current = value;
+    setDrawerPeek(value);
+  }, []);
+
+  const closePanel = useCallback(() => {
+    clearDrawerTimer();
+    setPeek(false);
+    setPanel(null);
+  }, [clearDrawerTimer, setPeek]);
+
+  // The pointer rests on the right edge: after a short pause the drawer opens over the page.
+  const edgeEnter = useCallback(() => {
+    clearDrawerTimer();
+    drawerTimer.current = window.setTimeout(() => {
+      drawerTimer.current = null;
+      if (panelRef.current !== null) return;
+      setPeek(true);
+      setPanel("drawer");
+    }, EDGE_OPEN_DELAY_MS);
+  }, [clearDrawerTimer, setPeek]);
+
+  // Leaving an edge-opened drawer closes it after a moment, so the pointer can come back to it.
+  const drawerLeave = useCallback(() => {
+    if (!peekRef.current) return;
+    clearDrawerTimer();
+    drawerTimer.current = window.setTimeout(() => {
+      drawerTimer.current = null;
+      if (!peekRef.current) return;
+      setPeek(false);
+      setPanel(null);
+    }, DRAWER_CLOSE_DELAY_MS);
+  }, [clearDrawerTimer, setPeek]);
+
+  // A click in the drawer keeps it open after the pointer leaves.
+  const drawerPin = useCallback(() => {
+    clearDrawerTimer();
+    setPeek(false);
+  }, [clearDrawerTimer, setPeek]);
 
   // Keyboard navigation for the reader. The EPUB frame reports its own keys.
   useEffect(() => {
@@ -308,6 +367,8 @@ export default function Reader({ book, lib, onBack }: ReaderProps) {
   }
 
   function openDrawer(tab: DrawerTab) {
+    clearDrawerTimer();
+    setPeek(false);
     setDrawerTab(tab);
     setPanel("drawer");
   }
@@ -559,6 +620,10 @@ export default function Reader({ book, lib, onBack }: ReaderProps) {
         <ToolStash label={t("savedTools")} templates={lib.state.data.templates} onPress={startDrag} />
       </ToolDock>
 
+      {panel === null ? (
+        <div className="drawer-edge" aria-hidden="true" onPointerEnter={edgeEnter} onPointerLeave={clearDrawerTimer} />
+      ) : null}
+
       <AnnotationProvider value={scene}>
         <main className="reader__stage" ref={stageRef}>
           {failed ? (
@@ -642,6 +707,10 @@ export default function Reader({ book, lib, onBack }: ReaderProps) {
           bookmarkTitle={bookmarkTitle}
           bookmarkDetail={bookmarkDetail}
           onClose={closePanel}
+          peek={drawerPeek}
+          onPointerEnter={clearDrawerTimer}
+          onPointerLeave={drawerLeave}
+          onPointerDown={drawerPin}
         />
       ) : null}
 

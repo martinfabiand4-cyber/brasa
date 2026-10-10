@@ -243,13 +243,26 @@
   color: var(--text-secondary);
 }
 
+/* min-height lets the list shrink inside the drawer's column, so it scrolls instead of running off the window. */
 .toc,
 .bookmarks {
   flex: 1;
+  min-height: 0;
   margin: var(--space-3) calc(var(--space-2) * -1) 0;
-  padding: 0;
-  overflow: auto;
+  padding: 0 var(--space-2) var(--space-4) 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   list-style: none;
+}
+
+/* The strip at the right edge: resting the pointer on it opens the drawer. */
+.drawer-edge {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 20px;
+  z-index: 45;
 }
 
 .toc li button {

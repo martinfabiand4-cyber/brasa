@@ -236,6 +236,17 @@ p {
   place-items: stretch end;
 }
 
+/* A drawer opened from the edge: no dimming, and the page stays usable except where the drawer is. */
+.scrim--peek {
+  background: transparent;
+  pointer-events: none;
+  animation: none;
+}
+
+.scrim--peek .drawer {
+  pointer-events: auto;
+}
+
 .sheet {
   width: min(420px, calc(100vw - 32px));
   max-height: calc(100vh - 32px);
